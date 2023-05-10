@@ -1,6 +1,6 @@
 #  ✨ Fighting Game AI ✨  
 
-[![Build Status](r)](https://www.fb.com/NeiH4207)
+![Image](GameBoard/images/image.png)
 
 
 ## Installation
