@@ -54,4 +54,8 @@ class State(Map):
         # Standardized variable names to improve readability and changed key name
         current_agent_coords = self.agent_coords_in_order[self.current_player]
         current_agent_idx = self.agent_current_idx
-        return {'obs': obs, 'coord_agent_in_action': current_agent_coords[current_agent_idx]}
+        return {
+            'player-id': self.current_player,
+            'observation': obs, 
+            'curr_agent_xy': current_agent_coords[current_agent_idx]
+            }

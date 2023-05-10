@@ -5,9 +5,9 @@ from src.player import Player
 import numpy as np
 from src.algorithms import *
 from src.state import State
-        
-class AgentFighting(object):
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.NOTSET)
 
+class AgentFighting(object):
     def __init__(self, args, configs, _init = True):
         self.args = args
         self.configs = configs
@@ -88,12 +88,11 @@ class AgentFighting(object):
             logging.warning('Invalid action! - ' + str(action))
             return self.get_reward()
         action_type = self.get_type_action(action)
-        print('Action: ' + str(action_type))
+        logging.info('Action: ' + str(action_type))
         current_player = self.state.current_player
         agent_current_idx = self.state.agent_current_idx
         agent_coords_in_order = self.state.agent_coords_in_order
         current_coord = agent_coords_in_order[current_player][agent_current_idx]
-        print('Current coord: ' + str(current_coord))
         if action_type[0] == 'Move':
             direction = action_type[1]
             next_coord = (self.direction_map[direction][0] + current_coord[0],
