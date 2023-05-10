@@ -1,4 +1,4 @@
-#  ✨ AlphaZero ProCon ✨  
+#  ✨ Fighting Game AI ✨  
 
 [![Build Status](r)](https://www.fb.com/NeiH4207)
 
