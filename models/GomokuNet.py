@@ -1,15 +1,7 @@
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import os
-from torch.distributions import Categorical
-from AdasOptimizer.adasopt_pytorch import Adas
-from torch.optim import Adam, SGD
-from collections import deque
-from tqdm import tqdm
 from models.nnet import NNet
-from matplotlib import pyplot as plt
 from models import ModelConfig
 config = ModelConfig
 

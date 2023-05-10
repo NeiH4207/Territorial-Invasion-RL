@@ -2,16 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-import os
-from torch.distributions import Categorical
-from AdasOptimizer.adasopt_pytorch import Adas
-from torch.optim import Adam, SGD
-from collections import deque
-from tqdm import tqdm
-from src.utils import dotdict, AverageMeter, plot
-from torch.autograd import Variable
-from matplotlib import pyplot as plt
-from models import ModelConfig
 from torch import optim as optim
 
 class NNet(nn.Module):
