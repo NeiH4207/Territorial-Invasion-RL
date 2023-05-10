@@ -43,6 +43,10 @@ class AgentFighting(object):
         self.screen.render()
     
     def reset(self):
+        """
+        Resets the game by resetting player scores, creating a new map, and initializing the game state.
+        :return: None
+        """
         self.players[0].reset_scores()
         self.players[1].reset_scores()
         self.state = State(self.configs['map'])
@@ -60,14 +64,26 @@ class AgentFighting(object):
         return action < self.num_actions
     
     def get_type_action(self, action):
-        if action < len(self.action_list['Move']):
+        """
+        Returns the type of the given action and the corresponding action list item.
+
+        :param action: An integer representing the index of the action in the flattened action list.
+        :return: A tuple of strings. The first string is the type of the action ('Move', 'Build', 'Destroy', or 'Stay').
+                The second string is the corresponding item from the action list.
+        """
+        move_len = len(self.action_list['Move'])
+        build_len = len(self.action_list['Build'])
+        destroy_len = len(self.action_list['Destroy'])
+
+        if action < move_len:
             return ('Move', self.action_list['Move'][action])
-        elif action < len(self.action_list['Move']) + len(self.action_list['Build']):
-            return ('Build', self.action_list['Build'][action - len(self.action_list['Move'])])
-        elif action < len(self.action_list['Move']) + len(self.action_list['Build']) + len(self.action_list['Destroy']):
-            return ('Destroy', self.action_list['Destroy'][action - len(self.action_list['Move']) - len(self.action_list['Build'])])
+        elif action < move_len + build_len:
+            return ('Build', self.action_list['Build'][action - move_len])
+        elif action < move_len + build_len + destroy_len:
+            return ('Destroy', self.action_list['Destroy'][action - move_len - build_len])
         else:
             return ('Stay',)
+
     
     def get_space_size(self):
         return self.state.get_state()['observation'].shape
@@ -76,14 +92,37 @@ class AgentFighting(object):
         return dcopy(self.state.get_state())
     
     def get_reward(self):
+        """
+        Calculates the reward for the current player based on their current state. 
+
+        Returns:
+            int: The difference between the current player's score and the sum of the walls
+            built by the current player.
+        """
         current_player = self.state.current_player
         scores = self.state.walls[current_player].sum()
         return scores - self.state.players[current_player].score
     
     def game_ended(self):
+        """
+        Checks if the game has ended by evaluating if there are any remaining turns left.
+
+        :return: Boolean value indicating whether or not the game has ended.
+        """
         return self.state.remaining_turns == 0
             
     def step(self, action):
+        """
+        This function performs a single step of the game by taking an action as input. The action 
+        should be valid or else the function returns the reward. If the action is valid, then the 
+        function updates the state of the game and returns the reward.
+
+        Args:
+            action: The action to be taken in the game.
+
+        Returns:
+            reward: The reward obtained from the step.
+        """
         if not self.is_valid_action(action):
             logging.warning('Invalid action! - ' + str(action))
             return self.get_reward()
@@ -106,9 +145,9 @@ class AgentFighting(object):
                 is_valid_action = False
                 
             elif self.state.agents[current_player][next_coord[0]][next_coord[1]] == 1:
-                # in turn (N agent actions at the same time), only one agent can move at an area, 
-                # so the other agent is moved into the same area befores
-                # agents save next coordinates but agent_coords_in_order is not updated to check this
+                ''' in turn (N agent actions at the same time), only one agent can move at an area, 
+                    so the other agent is moved into the same area befores
+                    agents save next coordinates but agent_coords_in_order is not updated to check this '''
                 is_valid_action = False
                 
             elif self.state.walls[0][next_coord[0]][next_coord[1]] == 1 \

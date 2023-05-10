@@ -21,8 +21,6 @@ def main():
     args = argument_parser()
     configs = json.load(open('config.json'))
     env = AgentFighting(args, configs)
-    
-    env.reset()
     algorithm = RandomStep(num_actions=env.num_actions, num_agents=env.num_agents)
     while not env.game_ended():
         state = env.get_state()
