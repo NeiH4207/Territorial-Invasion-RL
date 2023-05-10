@@ -70,7 +70,7 @@ class AgentFighting(object):
             return ('Stay',)
     
     def get_space_size(self):
-        return self.state.get_state()['obs'].shape
+        return self.state.get_state()['observation'].shape
             
     def get_state(self):
         return dcopy(self.state.get_state())
@@ -88,7 +88,7 @@ class AgentFighting(object):
             logging.warning('Invalid action! - ' + str(action))
             return self.get_reward()
         action_type = self.get_type_action(action)
-        logging.info('Action: ' + str(action_type))
+        logging.info('Player: {} | AgentID: {} | Action: {}'.format(self.state.current_player, self.state.agent_current_idx, action_type))
         current_player = self.state.current_player
         agent_current_idx = self.state.agent_current_idx
         agent_coords_in_order = self.state.agent_coords_in_order
