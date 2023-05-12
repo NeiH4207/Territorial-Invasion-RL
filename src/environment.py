@@ -91,17 +91,13 @@ class AgentFighting(object):
     def get_state(self):
         return dcopy(self.state.get_state())
     
-    def get_reward(self):
+    def get_score(self):
         """
-        Calculates the reward for the current player based on their current state. 
+        Returns the sum of walls in each player's side of the board.
 
-        Returns:
-            int: The difference between the current player's score and the sum of the walls
-            built by the current player.
+        :return: a list containing the sum of walls in each player's side of the board.
         """
-        current_player = self.state.current_player
-        scores = self.state.walls[current_player].sum()
-        return scores - self.state.players[current_player].score
+        return [self.state.walls[0].sum(), self.state.walls[1].sum()]
     
     def game_ended(self):
         """
@@ -111,6 +107,20 @@ class AgentFighting(object):
         """
         return self.state.remaining_turns == 0
             
+    def get_winner(self):
+        """
+        Returns the winner of the game.
+
+        :return: An integer representing the winner of the game.
+        """
+        scores = self.get_score()
+        if scores[0] > scores[1]:
+            return 0
+        elif scores[1] > scores[0]:
+            return 1
+        else:
+            return -1
+        
     def step(self, action):
         """
         This function performs a single step of the game by taking an action as input. The action 
@@ -127,16 +137,18 @@ class AgentFighting(object):
             logging.warning('Invalid action! - ' + str(action))
             return self.get_reward()
         action_type = self.get_type_action(action)
-        logging.info('Player: {} | AgentID: {} | Action: {}'.format(self.state.current_player, self.state.agent_current_idx, action_type))
         current_player = self.state.current_player
         agent_current_idx = self.state.agent_current_idx
         agent_coords_in_order = self.state.agent_coords_in_order
         current_coord = agent_coords_in_order[current_player][agent_current_idx]
+        is_valid_action = True
+        old_scores = self.get_score()
+        old_diff_score = old_scores[current_player] - old_scores[1 - current_player]
+        
         if action_type[0] == 'Move':
             direction = action_type[1]
             next_coord = (self.direction_map[direction][0] + current_coord[0],
                           self.direction_map[direction][1] + current_coord[1])
-            is_valid_action = True
             if not self.in_bounds(next_coord):
                 is_valid_action = False
                 
@@ -168,7 +180,6 @@ class AgentFighting(object):
             direction = action_type[1]
             wall_coord = (self.direction_map[direction][0] + current_coord[0],
                           self.direction_map[direction][1] + current_coord[1])
-            is_valid_action = True
             if not self.in_bounds(wall_coord):
                 is_valid_action = False
                 
@@ -192,7 +203,6 @@ class AgentFighting(object):
             direction = action_type[1]
             wall_coord = (self.direction_map[direction][0] + current_coord[0],
                           self.direction_map[direction][1] + current_coord[1])
-            is_valid_action = True
             if not self.in_bounds(wall_coord):
                 is_valid_action = False
                 
@@ -214,8 +224,16 @@ class AgentFighting(object):
             if self.state.current_player == 0:
                 self.state.remaining_turns -= 1
         
-        reward = self.get_reward()
-        self.state.players[current_player].score += reward
+        new_scores = self.get_score()
+        new_diff_score = new_scores[current_player] - new_scores[1 - current_player]
+        reward = new_diff_score - old_diff_score
+        self.state.players[0].score = new_scores[0]
+        self.state.players[1].score = new_scores[1]
+        
+        if is_valid_action:
+            logging.info('Player: {} | AgentID: {} | Action: {} | Reward: {}'.format(
+                self.state.current_player, self.state.agent_current_idx, action_type, reward))
+            
         if self.show_screen:
             self.screen.show_score()
             self.screen.render()

@@ -28,7 +28,14 @@ def main():
         reward = env.step(action)
         env.render()
         time.sleep(0.05)
+    
+    winner = env.get_winner()
+    if winner == -1:
+        logging.info('Game ended. Draw')
+    else:
+        logging.info('Game ended. Winner: {}'.format(env.get_winner()))
         
+    time.sleep(3)
 
 if __name__ == "__main__":
     main()
