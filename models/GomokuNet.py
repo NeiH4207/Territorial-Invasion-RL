@@ -1,7 +1,7 @@
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
-from models.nnet import NNet
+from models.AgentNet import NNet
 from models import ModelConfig
 config = ModelConfig
 

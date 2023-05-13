@@ -1,20 +1,20 @@
+from collections import deque
+import torch as T
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torch import optim as optim
+import random
+import numpy as np
+from collections import deque
 
-class NNet(nn.Module):
-
-    def forward(self, x):
+class AgentNet(nn.Module):
+    
+    def __init__(self) -> None:
+        super(AgentNet, self).__init__()
         pass
-            
-    def predict(self, x):
-        x = torch.FloatTensor(np.array(x.cpu())).to(self.device).detach()		# Chuyển đầu ra x về dạng torch tensor
-        x = x.reshape(-1, self.input_size)
-        output = self.forward(x)
-        return output.cpu().data.numpy().flatten()
- 
+    
     def set_loss_function(self, loss):
         if loss == "mse":
             self.loss = nn.MSELoss()		# Hàm loss là tổng bình phương sai lệch
@@ -33,18 +33,6 @@ class NNet(nn.Module):
         else:
             raise ValueError("Loss function not found")
         
-    def set_optimizer(self, optimizer, lr):
-        if optimizer == "sgd":
-            self.optimizer = optim.SGD(self.parameters(), lr=lr)		# Tối ưu theo gradient descent thuần túy
-        elif optimizer == "adam":
-            self.optimizer = optim.Adam(self.parameters(), lr=lr)
-        elif optimizer == "adadelta":
-            self.optimizer = optim.Adadelta(self.parameters(), lr=lr)		# Phương pháp Adadelta có lr update
-        elif optimizer == "adagrad":
-            self.optimizer = optim.Adagrad(self.parameters(), lr=lr)		# Phương pháp Adagrad chỉ cập nhật lr ko nhớ
-        elif optimizer == "rmsprop":
-            self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
-            
     def predict(self, s):
         s = torch.FloatTensor(np.array(s)).to(self.device).detach()
         with torch.no_grad():
@@ -74,12 +62,3 @@ class NNet(nn.Module):
     def save_train_losses(self, train_losses):
         self.train_losses = train_losses
         
-    def save(self, path=None):
-        torch.save(self.state_dict(), path)
-        print("Model saved at {}".format(path))
-        
-    def load(self, path=None):
-        if path is None:
-            raise ValueError("Path is not defined")
-        self.load_state_dict(torch.load(path, map_location=torch.device(self.device)))
-        print('Model loaded from {}'.format(path))
