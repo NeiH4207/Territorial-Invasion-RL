@@ -25,7 +25,7 @@ def main():
     while not env.game_ended():
         state = env.get_state()
         action = algorithm.get_action(state)
-        reward = env.step(action)
+        _ = env.step(action)
         env.render()
         time.sleep(0.05)
         

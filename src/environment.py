@@ -100,8 +100,9 @@ class AgentFighting(object):
             built by the current player.
         """
         current_player = self.state.current_player
-        scores = self.state.walls[current_player].sum()
-        return scores - self.state.players[current_player].score
+        previous_score = self.state.players[current_player].score
+        new_score = self.state.recalculate_score_of_current_player()
+        return new_score - previous_score
     
     def game_ended(self):
         """
@@ -215,7 +216,7 @@ class AgentFighting(object):
                 self.state.remaining_turns -= 1
         
         reward = self.get_reward()
-        self.state.players[current_player].score += reward
+        self.state.players[self.current_player].score += reward
         if self.show_screen:
             self.screen.show_score()
             self.screen.render()
