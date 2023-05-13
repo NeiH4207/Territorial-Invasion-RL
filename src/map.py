@@ -30,7 +30,7 @@ class Map(object):
     
     def make_random_map(self):
         self.agents = np.zeros((2, self.height_max, self.width_max))
-        self.walls = np.zeros((2, self.height_max, self.width_max))
+        self.walls = np.zeros((2, self.height_max, self.width_max), dtype=int)
         self.castles = np.zeros((self.height_max, self.width_max))
         self.territories = np.zeros((2, self.height_max, self.width_max))
         
