@@ -93,14 +93,6 @@ class AgentFighting(object):
     def get_state(self):
         return dcopy(self.state.get_state())
     
-    def get_score(self):
-        """
-        Returns the sum of walls in each player's side of the board.
-
-        :return: a list containing the sum of walls in each player's side of the board.
-        """
-        return [self.state.walls[0].sum(), self.state.walls[1].sum()]
-    
     def game_ended(self):
         """
         Checks if the game has ended by evaluating if there are any remaining turns left.
@@ -115,10 +107,9 @@ class AgentFighting(object):
 
         :return: An integer representing the winner of the game.
         """
-        scores = self.get_score()
-        if scores[0] > scores[1]:
+        if self.state.scores[0] > self.state.scores[1]:
             return 0
-        elif scores[1] > scores[0]:
+        elif self.state.scores[1] > self.state.scores[0]:
             return 1
         else:
             return -1
@@ -144,8 +135,8 @@ class AgentFighting(object):
         agent_coords_in_order = self.state.agent_coords_in_order
         current_coord = agent_coords_in_order[current_player][agent_current_idx]
         is_valid_action = True
-        old_scores = self.get_score()
-        old_diff_score = old_scores[current_player] - old_scores[1 - current_player]
+        
+        previous_scores = self.state.scores
         
         if action_type[0] == 'Move':
             direction = action_type[1]
@@ -222,11 +213,11 @@ class AgentFighting(object):
         else:
             pass
         
-        new_scores = self.get_score()
-        new_diff_score = new_scores[current_player] - new_scores[1 - current_player]
-        reward = new_diff_score - old_diff_score
-        self.state.players[0].score = new_scores[0]
-        self.state.players[1].score = new_scores[1]
+        self.state.update_score()
+        new_scores = self.state.scores[[current_player, 1 - current_player]]
+        diff_previous_scores = previous_scores[current_player] - previous_scores[1 - current_player]
+        diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
+        reward = diff_new_score - diff_previous_scores
         
         self.state.agent_current_idx = (agent_current_idx + 1) % self.num_agents
         if self.state.agent_current_idx == 0:
@@ -241,6 +232,8 @@ class AgentFighting(object):
             
         if is_valid_action:
             logging.info('Player: {} | AgentID: {} | Action: {} | Reward: {}'.format(
-                self.state.current_player, self.state.agent_current_idx, action_type, reward))
+                current_player, agent_current_idx, action_type, reward))
+        else:
             return self.get_state(), 0, self.game_ended()
+        
         return self.get_state(), reward, self.game_ended()

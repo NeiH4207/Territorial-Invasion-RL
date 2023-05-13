@@ -36,51 +36,39 @@ def main():
     env = AgentFighting(args, configs, args.show_screen)
     n_observations = env.get_space_size()
     n_actions = env.n_actions
-    algorithm = None
     model = AZNet(n_observations, n_actions)
-    if args.algorithm == 'dqn':
-        algorithm = DQN(n_observations, 
-                        n_actions,
-                        model,
-                        configs['model']['optimizer'],
-                        configs['model']['lr'],
-                        model_path=args.model_path)
-        model_dir = os.path.dirname(args.model_path)
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-            logging.info('Created model directory: {}'.format(model_dir))
-        if args.load_model:
-            algorithm.load_model(args.model_path)
-            
-    elif args.algorithm == 'random':
-        algorithm = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)
-    else:
-        raise ValueError('Algorithm {} is not supported'.format(args.algorithm))
+    dqn = DQN(n_observations, 
+                    n_actions,
+                    model,
+                    configs['model']['optimizer'],
+                    configs['model']['lr'],
+                    model_path=args.model_path)
+    model_dir = os.path.dirname(args.model_path)
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+        logging.info('Created model directory: {}'.format(model_dir))
+    if args.load_model:
+        dqn.load_model(args.model_path)
+        
+    random_step = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)
     
     for episode in range(args.num_game):
         done = False
         state = env.reset()
-        state = state['observation']
+        state = state
         for cnt in count():
             env.render()
-            action = algorithm.get_action(state)
+            if state['player-id'] == 0:
+                action = random_step.get_action(state['observation'])
+            else:
+                action = dqn.get_action(state['observation'])
             next_state, reward, done = env.step(action)
-            next_state = next_state['observation']
-            algorithm.memorize(state, action, next_state, reward, done)
             state = next_state
-            history = algorithm.replay(configs['model']['batch_size'])
-            if history and args.verbose:
-                plt.figure(1)
-                plt.xlabel('Episode')
-                plt.ylabel('Loss')
-                plt.title('Training...')
-                plt.ion()
-                plt.plot(history['loss'], 'b')
-                plt.pause(0.001)
             if done:
                 break
+            time.sleep(0.1)
             
-        algorithm.save_model(args.model_path)
+        dqn.save_model(args.model_path)
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
                 
     time.sleep(3)
