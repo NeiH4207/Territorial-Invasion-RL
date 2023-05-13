@@ -6,8 +6,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim as optim
 
-from models import AgentNet
-
 
 class GymNet(nn.Module):
 

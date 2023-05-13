@@ -15,6 +15,7 @@ from Algorithms.RandomStep import RandomStep
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
 from Algorithms.DQN import DQN
+from models.GymNet import GymNet
 import gym
 
 def argument_parser():
@@ -33,9 +34,11 @@ def main():
     env = gym.make('CartPole-v1', render_mode='human')
     n_observations, n_actions = env.observation_space.shape[0], env.action_space.n
     algorithm = None
+    model = GymNet(n_observations, n_actions)
     if args.algorithm == 'dqn':
         algorithm = DQN(n_observations, 
                         n_actions,
+                        model,
                         configs['model']['optimizer'],
                         configs['model']['lr'],
                         model_path=args.model_path)
