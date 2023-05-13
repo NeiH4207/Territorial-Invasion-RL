@@ -1,1 +1,91 @@
-{}
+{
+    "nnet6x6":{
+        "conv1-num-filter": 16, 
+        "conv1-kernel-size": 3,
+        "conv1-stride": 1,
+        "conv1-padding": 1,
+
+        "conv2-num-filter": 32,
+        "conv2-kernel-size": 3,
+        "conv2-stride": 1,
+        "conv2-padding": 0,
+        
+        "conv3-num-filter": 64,
+        "conv3-kernel-size": 3,
+        "conv3-stride": 1,
+        "conv3-padding": 0,
+
+        "num-resblocks": 6,
+        "resblock-kernel-size": 3,
+        
+        "fc1-num-units": 256,
+        "fc1-dropout": 0.3,
+        "fc2-num-units": 128,
+        "fc3-num-units": 64,
+        "fc3-dropout": 0.3,
+        "fc4-num-units": 64,
+
+        "optimizer": "adam",
+        "learning-rate": 0.005
+    },
+
+    "nnet9x9":{
+        "conv1-num-filter": 8, 
+        "conv1-kernel-size": 3,
+        "conv1-stride": 1,
+        "conv1-padding": 2,
+
+        "conv2-num-filter": 16,
+        "conv2-kernel-size": 3,
+        "conv2-stride": 1,
+        "conv2-padding": 1,
+        
+        "conv3-num-filter": 32,
+        "conv3-kernel-size": 3,
+        "conv3-stride": 1,
+        "conv3-padding": 1,
+        
+        "num-resblocks": 5,
+        "resblock-kernel-size": 3,
+        
+        "fc1-num-units": 512,
+        "fc1-dropout": 0.3,
+        "fc2-num-units": 384,
+        "fc3-num-units": 256,
+        "fc3-dropout": 0.3,
+        "fc4-num-units": 32,
+
+        "optimizer": "adam",
+        "learning-rate": 0.005
+    },
+
+    "nnet13x13":{
+        "conv1-num-filter": 128, 
+        "conv1-kernel-size": 7,
+        "conv1-stride": 1,
+        "conv1-padding": 2,
+
+        "conv2-num-filter": 256,
+        "conv2-kernel-size": 5,
+        "conv2-stride": 1,
+        "conv2-padding": 1,
+        
+        "conv3-num-filter": 512,
+        "conv3-kernel-size": 3,
+        "conv3-stride": 1,
+        "conv3-padding": 0,
+        
+        "num-resblocks": 11,
+        "resblock-kernel-size": 3,
+        
+        "fc1-num-units": 512,
+        "fc1-dropout": 0.5,
+        "fc2-num-units": 384,
+        "fc3-num-units": 256,
+        "fc3-dropout": 0.5,
+        "fc4-num-units": 32,
+
+        "optimizer": "adam",
+        "learning-rate": 0.005
+    } 
+}
