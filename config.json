@@ -1,21 +1,21 @@
 {
     "map":{
-        "height-min": 10,
-        "height-max": 16,
-        "width-min": 10,
-        "width-max": 16,
-        "min-num-agents": 2,
-        "max-num-agents": 5,
-        "min-num-turns": 30,
-        "max-num-turns": 60,
+        "height-min": 9,
+        "height-max": 9,
+        "width-min": 9,
+        "width-max": 9,
+        "min-num-agents": 1,
+        "max-num-agents": 1,
+        "min-num-turns": 100,
+        "max-num-turns": 100,
         "num-castles": 2
     }, 
-    "NNet": {
-        "lr": 0.001,
-        "dropout": 0.3,
+    "model": {
+        "lr": 0.00001,
+        "dropout": 0.1,
         "epochs": 20,
         "batch_size": 64,
         "num_channels": 256,
-        "optimizer": "adas"
+        "optimizer": "adamw"
     }
 }
