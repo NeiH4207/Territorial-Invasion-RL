@@ -36,7 +36,7 @@ class State(Map):
         castle_board = self.castles
         wall_board = self.walls[players]
         territory_board = self.territories[players]
-
+        agent_current_board = np.zeros(agent_board[0].shape)
         # Removed debugging statement
         obs = np.stack(
             (
@@ -46,14 +46,16 @@ class State(Map):
                 wall_board[0], 
                 wall_board[1],
                 territory_board[0], 
-                territory_board[1]
+                territory_board[1],
+                agent_current_board
             ),
             axis=0
         )
 
         # Standardized variable names to improve readability and changed key name
-        current_agent_coords = self.agent_coords_in_order[self.current_player]
         current_agent_idx = self.agent_current_idx
+        current_agent_coords = self.agent_coords_in_order[self.current_player][current_agent_idx]
+        agent_current_board[current_agent_coords[0], current_agent_coords[1]] = 1
         return {
             'player-id': self.current_player,
             'observation': obs, 
