@@ -10,19 +10,17 @@ import os
 import time
 
 import numpy as np
-from Algorithms.RandomStep import RandomStep
+from algorithms.RandomStep import RandomStep
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
-from Algorithms.DQN import DQN
+from algorithms.DQN import DQN
 from models.GymNet import GymNet
 import gym
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=True)
     parser.add_argument('-a', '--algorithm', default='dqn')
     parser.add_argument('-n', '--num-game', default=1000, type=int)
-    parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--load-model', action='store_true', default=False)
     return parser.parse_args()
@@ -30,7 +28,7 @@ def argument_parser():
 def main():
     args = argument_parser()
     configs = json.load(open('config.json'))
-    env = gym.make('CartPole-v1', render_mode='human')
+    env = gym.make('CartPole-v1')
     n_observations, n_actions = env.observation_space.shape[0], env.action_space.n
     algorithm = None
     model = GymNet(n_observations, n_actions)

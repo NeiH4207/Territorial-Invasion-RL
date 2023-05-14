@@ -17,7 +17,7 @@ class DQN():
         self.gamma = 0.99
         self.epsilon = 0.9
         self.epsilon_min = 0.05
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.95
         self.learning_rate = learning_rate
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.policy_net = model
