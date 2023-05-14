@@ -7,7 +7,6 @@ from itertools import count
 import json
 import logging
 import os
-import random
 import time
 
 import numpy as np
@@ -56,21 +55,20 @@ def main():
     
     for episode in range(args.num_game):
         done = False
-        state = env.reset()
-        state = np.reshape(state[0], [1,4])
+        state, info = env.reset()
         cnt = 0
         for cnt in count():
             env.render()
             action = algorithm.get_action(state)
             next_state, reward, done, truncated, _ = env.step(action)
             reward = reward if not done else -1
-            next_state = np.reshape(next_state, [1,4])
             algorithm.memorize(state, action, next_state, reward, done)
             state = next_state
             algorithm.replay(configs['model']['batch_size'])
             if done or truncated:
                 break
             
+        algorithm.adaptiveEGreedy()
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
                 
     time.sleep(3)
