@@ -27,6 +27,7 @@ def argument_parser():
     parser.add_argument('-n', '--num-game', default=1000, type=int)
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
+    parser.add_argument('--figure-path', type=str, default='figures/')
     parser.add_argument('--load-model', action='store_true', default=True)
     return parser.parse_args()
 
@@ -38,6 +39,17 @@ def main():
     n_actions = env.n_actions
     algorithm = None
     model = AZNet(n_observations, n_actions)
+    
+    model_dir = os.path.dirname(args.model_path)
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+        logging.info('Created model directory: {}'.format(model_dir))
+
+        
+    if not os.path.exists(args.figure_path):
+        os.makedirs(args.figure_path)
+        logging.info('Created figure directory: {}'.format(args.figure_path))
+        
     if args.algorithm == 'dqn':
         algorithm = DQN(n_observations, 
                         n_actions,
@@ -45,10 +57,6 @@ def main():
                         configs['model']['optimizer'],
                         configs['model']['lr'],
                         model_path=args.model_path)
-        model_dir = os.path.dirname(args.model_path)
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-            logging.info('Created model directory: {}'.format(model_dir))
         if args.load_model:
             algorithm.load_model(args.model_path)
             
@@ -76,7 +84,7 @@ def main():
                 plt.title('Training...')
                 plt.ion()
                 plt.plot(history['loss'], 'b')
-                plt.pause(0.001)
+                plt.savefig(os.path.join(args.figure_path, 'loss.png'))
             if done:
                 break
             

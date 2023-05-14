@@ -71,12 +71,12 @@ class State(Map):
 
         # Standardized variable names to improve readability and changed key name
         current_agent_idx = self.agent_current_idx
-        current_agent_coords = self.agent_coords_in_order[self.current_player][current_agent_idx]
-        agent_current_board[current_agent_coords[0], current_agent_coords[1]] = 1
+        current_agent_coord = self.agent_coords_in_order[self.current_player][current_agent_idx]
+        agent_current_board[current_agent_coord[0], current_agent_coord[1]] = 1
         return {
             'player-id': self.current_player,
             'observation': obs, 
-            'curr_agent_xy': current_agent_coords[current_agent_idx]
+            'curr_agent_xy': current_agent_coord
             }
 
     def get_scores(self, player):

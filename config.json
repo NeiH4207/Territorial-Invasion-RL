@@ -4,11 +4,11 @@
         "height-max": 9,
         "width-min": 9,
         "width-max": 9,
-        "min-num-agents": 1,
-        "max-num-agents": 1,
+        "min-num-agents": 2,
+        "max-num-agents": 5,
         "min-num-turns": 100,
         "max-num-turns": 100,
-        "num-castles": 2
+        "num-castles": 5
     }, 
     "model": {
         "lr": 0.001,
