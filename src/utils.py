@@ -230,3 +230,11 @@ class OrnsteinUhlenbeckActionNoise:
 		dx = dx + self.sigma * np.random.randn(len(self.X))
 		self.X = self.X + dx
 		return self.X
+
+def plot_history(history, figure_path):
+    plt.figure(1)
+    plt.xlabel('Episode')
+    plt.ylabel('Loss')
+    plt.title('Training...')
+    plt.plot(history['loss'], 'b')
+    plt.savefig(os.path.join(figure_path, 'loss.png'))

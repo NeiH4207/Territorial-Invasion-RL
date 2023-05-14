@@ -1,6 +1,6 @@
 from copy import deepcopy as dcopy
 import logging
-from Board.screen import Screen
+from board.screen import Screen
 from src.player import Player
 from src.algorithms import *
 from src.state import State
@@ -213,12 +213,21 @@ class AgentFighting(object):
         else:
             pass
         
-        self.state.update_score()
-        new_scores = self.state.scores[[current_player, 1 - current_player]]
-        diff_previous_scores = previous_scores[current_player] - previous_scores[1 - current_player]
-        diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
-        reward = diff_new_score - diff_previous_scores
+        if self.show_screen:
+            self.screen.show_score()
+            self.screen.render()
         
+        if is_valid_action:
+            self.state.update_score()
+            new_scores = self.state.scores
+            diff_previous_scores = previous_scores[current_player] - previous_scores[1 - current_player]
+            diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
+            reward = diff_new_score - diff_previous_scores
+            logging.info('Player: {} | AgentID: {} | Action: {} | Reward: {}'.format(
+                current_player, agent_current_idx, action_type, reward))
+        else:
+            reward = 0
+            
         self.state.agent_current_idx = (agent_current_idx + 1) % self.num_agents
         if self.state.agent_current_idx == 0:
             self.state.current_player = (self.state.current_player + 1) % self.num_players
@@ -226,14 +235,4 @@ class AgentFighting(object):
             if self.state.current_player == 0:
                 self.state.remaining_turns -= 1
                 
-        if self.show_screen:
-            self.screen.show_score()
-            self.screen.render()
-            
-        if is_valid_action:
-            logging.info('Player: {} | AgentID: {} | Action: {} | Reward: {}'.format(
-                current_player, agent_current_idx, action_type, reward))
-        else:
-            return self.get_state(), 0, self.game_ended()
-        
         return self.get_state(), reward, self.game_ended()
