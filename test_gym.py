@@ -10,10 +10,10 @@ import os
 import time
 
 import numpy as np
-from algorithms.RandomStep import RandomStep
+from Algorithms.RandomStep import RandomStep
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
-from algorithms.DQN import DQN
+from Algorithms.DQN import DQN
 from models.GymNet import GymNet
 import gym
 

@@ -9,13 +9,13 @@ import logging
 import os
 from matplotlib import pyplot as plt
 import torch
-from algorithms.RandomStep import RandomStep
+from Algorithms.RandomStep import RandomStep
 from models.AZNet import AZNet
 from src.environment import AgentFighting
 from src.utils import plot_history
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
-from algorithms.DQN import DQN
+from Algorithms.DQN import DQN
 import matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
 
@@ -29,7 +29,7 @@ def argument_parser():
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--figure-path', type=str, default='figures/')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--load-model', action='store_true', default=False)
     return parser.parse_args()
 
 def main():

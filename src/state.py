@@ -17,6 +17,7 @@ class State(Map):
         self.alpha = 1
         self.beta = 10
         self.gamma = 1
+        self.limit_obs_size = 4
         
     @property
     def scores(self):
@@ -45,6 +46,26 @@ class State(Map):
         state = dcopy(self)
         state.current_player ^= 1
         return state
+
+    def transition_matrix(self, matrix, vector):
+        result = []
+        rows, cols = len(matrix), len(matrix[0])
+        dx, dy = vector
+
+        for i in range(rows):
+            row = []
+            for j in range(cols):
+                new_i, new_j = i - dx, j - dy
+                if 0 <= new_i < rows and 0 <= new_j < cols:
+                    row.append(matrix[new_i][new_j])
+                else:
+                    row.append(-1)
+            if row:
+                result.append(row)
+
+        return np.array(result)
+
+
     
     def get_state(self):
         # Standardized variable names to improve readability
@@ -63,8 +84,7 @@ class State(Map):
                 wall_board[0], 
                 wall_board[1],
                 territory_board[0], 
-                territory_board[1],
-                agent_current_board
+                territory_board[1]
             ),
             axis=0
         )
@@ -72,6 +92,13 @@ class State(Map):
         # Standardized variable names to improve readability and changed key name
         current_agent_idx = self.agent_current_idx
         current_agent_coord = self.agent_coords_in_order[self.current_player][current_agent_idx]
+        transision_vector = (self.limit_obs_size - 1 - current_agent_coord[0], 
+                             self.limit_obs_size - 1 - current_agent_coord[1])
+        for i, matrix in enumerate(obs):
+            obs[i] = self.transition_matrix(matrix, transision_vector)
+            
+        # crop obs to limit_obs_size
+        obs = obs[:, :self.limit_obs_size*2-1, :self.limit_obs_size*2-1]
         agent_current_board[current_agent_coord[0], current_agent_coord[1]] = 1
         return {
             'player-id': self.current_player,
