@@ -84,10 +84,10 @@ def main():
             state = next_state
             history = algorithm.replay(configs['model']['batch_size'])
             env.save_image(os.path.join(args.figure_path, 'current_state.png'.format(episode, cnt)))
+            if done:
+                break
         if history and args.verbose:
             plot_history(history, args.figure_path)
-        if done:
-            break
             
         algorithm.save_model(args.model_path)
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
