@@ -83,6 +83,7 @@ def main():
             algorithm.memorize(state, action, next_state, reward, done)
             state = next_state
             history = algorithm.replay(configs['model']['batch_size'])
+            env.save_image(os.path.join(args.figure_path, 'current_state.png'.format(episode, cnt)))
             if history and args.verbose:
                 plot_history(history, args.figure_path)
             if done:

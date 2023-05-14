@@ -43,6 +43,10 @@ class AgentFighting(object):
         if self.show_screen:
             self.screen.render()
     
+    def save_image(self, path):
+        if self.show_screen:
+            self.screen.save(path)
+    
     def reset(self):
         """
         Resets the game by resetting player scores, creating a new map, and initializing the game state.
