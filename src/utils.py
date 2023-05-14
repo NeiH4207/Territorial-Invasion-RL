@@ -236,5 +236,6 @@ def plot_history(history, figure_path):
     plt.xlabel('Episode')
     plt.ylabel('Loss')
     plt.title('Training...')
-    plt.plot(history['loss'], 'b')
+    plt.plot(history['loss'][-5000:], 'b')
     plt.savefig(os.path.join(figure_path, 'loss.png'))
+    plt.close()
