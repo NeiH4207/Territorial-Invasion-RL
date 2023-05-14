@@ -1,6 +1,6 @@
 from copy import deepcopy as dcopy
 import logging
-from GameBoard.screen import Screen
+from Board.screen import Screen
 from src.player import Player
 from src.algorithms import *
 from src.state import State
