@@ -7,15 +7,15 @@ from itertools import count
 import json
 import logging
 import os
-import time
 from matplotlib import pyplot as plt
 import torch
-from Algorithms.RandomStep import RandomStep
+from algorithms.RandomStep import RandomStep
 from models.AZNet import AZNet
 from src.environment import AgentFighting
+from src.utils import plot_history
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
-from Algorithms.DQN import DQN
+from algorithms.DQN import DQN
 import matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
 
@@ -62,8 +62,12 @@ def main():
         if args.load_model:
             algorithm.load_model(args.model_path)
             
+    elif args.algorithm == 'pso':
+        return
+    
     elif args.algorithm == 'random':
         algorithm = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)
+        
     else:
         raise ValueError('Algorithm {} is not supported'.format(args.algorithm))
     
@@ -80,20 +84,12 @@ def main():
             state = next_state
             history = algorithm.replay(configs['model']['batch_size'])
             if history and args.verbose:
-                plt.figure(1)
-                plt.xlabel('Episode')
-                plt.ylabel('Loss')
-                plt.title('Training...')
-                plt.ion()
-                plt.plot(history['loss'], 'b')
-                plt.savefig(os.path.join(args.figure_path, 'loss.png'))
+                plot_history(history, args.figure_path)
             if done:
                 break
             
         algorithm.save_model(args.model_path)
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
-                
-    time.sleep(3)
 
 if __name__ == "__main__":
     main()
