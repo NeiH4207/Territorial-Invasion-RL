@@ -91,11 +91,11 @@ class Screen():
         
         color = LINE_COLOR
         
-        SA = myFont.render("Score: " + str(round(self.state.players[0].score)), 0, color)
-        SB = myFont.render("Score: " + str(round(self.state.players[1].score)), 0, color)
+        SA = myFont.render("Score: " + str(round(self.state.scores[0])), 0, color)
+        SB = myFont.render("Score: " + str(round(self.state.scores[1])), 0, color)
         
         myFont = pygame.font.SysFont("Helvetica", 30)
-        STurns = myFont.render("Number of steps left: " + str(self.state.remaining_turns), 0, color)
+        STurns = myFont.render("Steps left: " + str(self.state.remaining_turns), 0, color)
         
         text_1_coord = self.coord(1, self.width)
         text_2_coord = self.coord(1, self.width + 1)

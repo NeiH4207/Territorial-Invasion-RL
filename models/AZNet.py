@@ -1,25 +1,22 @@
 #!/usr/bin/env python
+import numpy as np
 import torch
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset
-import matplotlib
+from torch import optim as optim
 from models import ModelConfig
-
-from models.nnet import NNet
-matplotlib.use("Agg")
 
 class ResBlock(nn.Module):
     def __init__(self, inplanes=128, planes=128, kernel_size=3, stride=1, downsample=None):
         super(ResBlock, self).__init__()
         self.device = 'cuda' if T.cuda.is_available() else 'cpu'
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=kernel_size, stride=stride,
-                     padding=1, bias=False).to(self.device)
-        self.bn1 = nn.BatchNorm2d(planes).to(self.device)
+                     padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=kernel_size, stride=stride,
-                     padding=1, bias=False).to(self.device)
-        self.bn2 = nn.BatchNorm2d(planes).to(self.device)
+                     padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
 
     def forward(self, x):
         residual = x
@@ -36,51 +33,43 @@ class OutBlock(nn.Module):
         super(OutBlock, self).__init__()
         self.config = config
         self.device = 'cuda' if T.cuda.is_available() else 'cpu'
-        self.fc1 = nn.Linear(input_shape, config['fc1-num-units']).to(self.device)
-        self.fc_bn1 = nn.BatchNorm1d(config['fc1-num-units']).to(self.device)
+        self.fc1 = nn.Linear(input_shape, config['fc1-num-units'])
+        self.fc_bn1 = nn.BatchNorm1d(config['fc1-num-units'])
 
-        self.fc2 = nn.Linear(config['fc1-num-units'], config['fc2-num-units']).to(self.device)
-        self.fc_bn2 = nn.BatchNorm1d(config['fc2-num-units']).to(self.device)
-
-        self.fc3 = nn.Linear(config['fc2-num-units'], config['fc3-num-units']).to(self.device)
-        self.fc_bn3 = nn.BatchNorm1d(config['fc3-num-units']).to(self.device)
-
-        self.fc4 = nn.Linear(config['fc2-num-units'], output_shape).to(self.device)
-        self.fc5 = nn.Linear(config['fc3-num-units'], 1).to(self.device)
+        self.fc2 = nn.Linear(config['fc1-num-units'], config['fc2-num-units'])
+        self.fc_bn2 = nn.BatchNorm1d(config['fc2-num-units'])
+        
+        self.fc3 = nn.Linear(config['fc2-num-units'], output_shape)
     
     def forward(self, s):
         out = F.dropout(F.relu(self.fc1(s)), p=self.config['fc1-dropout'], training=self.training)  # batch_size x 1024
         out = F.relu(self.fc2(out))
-        pi =self.fc4(out) 
+        pi =self.fc3(out) 
+        return pi
     
-        v = F.dropout((F.relu(self.fc3(out))), p=self.config['fc3-dropout'], training=self.training)  # batch_size x 1024                               # batch_size x action_size
-        v = self.fc5(v)                                              # batch_size x 1
-
-        return F.log_softmax(pi, dim=1), T.tanh(v)
-    
-class AZNet(NNet):
-    def __init__(self, name, input_shape, output_shape):
+class AZNet(nn.Module):
+    def __init__(self, input_shape, output_shape):
         super(AZNet, self).__init__()
         # game params
-        self.name = name
-        config = ModelConfig[name]
+        self.name = 'nnet6x6'
+        config = ModelConfig[self.name]
         self.config = config
         self.input_shape = input_shape
         self.output_shape = output_shape
         self.in_channels = input_shape[0]
         self.board_x, self.board_y = input_shape[1], input_shape[2]
-        self.device = 'cuda' if T.cuda.is_available() else 'cpu'
+        
         self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
-                               stride=config['conv1-stride'], padding=config['conv1-padding']).to(self.device)
+                               stride=config['conv1-stride'], padding=config['conv1-padding'])
         
         self.conv2 = nn.Conv2d(config['conv1-num-filter'], config['conv2-num-filter'], kernel_size=config['conv2-kernel-size'],
-                                 stride=config['conv2-stride'], padding=config['conv2-padding']).to(self.device)
+                                 stride=config['conv2-stride'], padding=config['conv2-padding'])
         self.conv3 = nn.Conv2d(config['conv2-num-filter'], config['conv3-num-filter'], kernel_size=config['conv3-kernel-size'],
-                                    stride=config['conv3-stride'], padding=config['conv3-padding']).to(self.device)
+                                    stride=config['conv3-stride'], padding=config['conv3-padding'])
         
-        self.bn1 = nn.BatchNorm2d(config['conv1-num-filter']).to(self.device)
-        self.bn2 = nn.BatchNorm2d(config['conv2-num-filter']).to(self.device)
-        self.bn3 = nn.BatchNorm2d(config['conv3-num-filter']).to(self.device)
+        self.bn1 = nn.BatchNorm2d(config['conv1-num-filter'])
+        self.bn2 = nn.BatchNorm2d(config['conv2-num-filter'])
+        self.bn3 = nn.BatchNorm2d(config['conv3-num-filter'])
         
         self.avg_pool = nn.AvgPool2d(2)
         
@@ -95,16 +84,78 @@ class AZNet(NNet):
         self.out_conv3_dim = int((self.out_conv2_dim - config['conv3-kernel-size'] + 2 * config['conv3-padding']) / config['conv3-stride'] + 1)
         self.flatten_dim = config['conv3-num-filter'] * ((self.out_conv3_dim >> 1) ** 2)
         self.outblock = OutBlock(config, self.flatten_dim, output_shape)
-        self.set_optimizer(config["optimizer"], config["learning-rate"])
     
-    def forward(self,s):
-        s = s.view(-1, self.in_channels, self.board_x, self.board_y)  
-        s = F.relu(self.bn1(self.conv1(s)))                          # batch_size x num_channels x board_x x board_y
-        s = F.relu(self.bn2(self.conv2(s)))           # batch_size x num_channels x board_x x board_y
-        s = F.relu(self.bn3(self.conv3(s))) 
+    def forward(self, s):
+        s = F.dropout(F.relu(self.bn1(self.conv1(s))), p=0.3, training=self.training)
+        s = F.dropout(F.relu(self.bn2(self.conv2(s))), p=0.3, training=self.training)
+        s = F.dropout(F.relu(self.bn3(self.conv3(s))), p=0.3, training=self.training)
+        
         for block in range(self.config['num-resblocks']):
             s = getattr(self, "res_%i" % block)(s)
+            
         s = self.avg_pool(s)               
         s = s.view(-1, self.flatten_dim)
         s = self.outblock(s)
         return s
+    
+    def set_loss_function(self, loss):
+        if loss == "mse":
+            self.loss = nn.MSELoss()		# Hàm loss là tổng bình phương sai lệch
+        elif loss == "cross_entropy":
+            self.loss = nn.CrossEntropyLoss()
+        elif loss == "bce":
+            self.loss = nn.BCELoss()		# Hàm loss là binary cross entropy, với đầu ra 2 lớp
+        elif loss == "bce_logits":
+            self.loss = nn.BCEWithLogitsLoss()		# Hàm BCE logit sau đầu ra dự báo có thêm sigmoid, giống BCE
+        elif loss == "l1":
+            self.loss = nn.L1Loss()
+        elif loss == "smooth_l1":
+            self.loss = nn.SmoothL1Loss()		# Hàm L1 loss nhưng có đỉnh được làm trơn, khả vi với mọi điểm
+        elif loss == "soft_margin":
+            self.loss = nn.SoftMarginLoss()		# Hàm tối ưu logistic loss 2 lớp của mục tiêu và đầu ra dự báo
+        else:
+            raise ValueError("Loss function not found")
+    
+    def set_optimizer(self, optimizer, lr):
+        if optimizer == "sgd":
+            self.optimizer = optim.SGD(self.parameters(), lr=lr)		# Tối ưu theo gradient descent thuần túy
+        elif optimizer == "adam":
+            self.optimizer = optim.Adam(self.parameters(), lr=lr)
+        elif optimizer == "adadelta":
+            self.optimizer = optim.Adadelta(self.parameters(), lr=lr)		# Phương pháp Adadelta có lr update
+        elif optimizer == "adagrad":
+            self.optimizer = optim.Adagrad(self.parameters(), lr=lr)		# Phương pháp Adagrad chỉ cập nhật lr ko nhớ
+        elif optimizer == "rmsprop":
+            self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
+        else:
+            self.optimizer = optim.AdamW(self.parameters(), lr=lr, amsgrad=True)
+    
+    def predict(self, x):	# Chuyển đầu ra x về dạng torch tensor
+        self.eval()
+        x = x.reshape(-1, self.input_shape[0], self.input_shape[1], self.input_shape[2])
+        output = self.forward(x).detach()
+        return output.cpu().data.numpy()
+    
+    def set_optimizer(self, optimizer, lr):
+        if optimizer == "sgd":
+            self.optimizer = optim.SGD(self.parameters(), lr=lr)		# Tối ưu theo gradient descent thuần túy
+        elif optimizer == "adam":
+            self.optimizer = optim.Adam(self.parameters(), lr=lr)
+        elif optimizer == "adadelta":
+            self.optimizer = optim.Adadelta(self.parameters(), lr=lr)		# Phương pháp Adadelta có lr update
+        elif optimizer == "adagrad":
+            self.optimizer = optim.Adagrad(self.parameters(), lr=lr)		# Phương pháp Adagrad chỉ cập nhật lr ko nhớ
+        elif optimizer == "rmsprop":
+            self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
+        else:
+            self.optimizer = optim.AdamW(self.parameters(), lr=lr, amsgrad=True)
+    
+    def save(self, path=None):
+        torch.save(self.state_dict(), path)
+        print("Model saved at {}".format(path))
+        
+    def load(self, path=None):
+        if path is None:
+            raise ValueError("Path is not defined")
+        self.load_state_dict(torch.load(path))
+        print('Model loaded from {}'.format(path))

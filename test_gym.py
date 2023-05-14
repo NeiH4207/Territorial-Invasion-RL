@@ -8,17 +8,14 @@ import json
 import logging
 import os
 import time
-from matplotlib import pyplot as plt
+
+import numpy as np
 from Algorithms.RandomStep import RandomStep
-from models.AZNet import AZNet
-from src.environment import AgentFighting
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
 from Algorithms.DQN import DQN
-import matplotlib
-is_ipython = 'inline' in matplotlib.get_backend()
-
-plt.ion()
+from models.GymNet import GymNet
+import gym
 
 def argument_parser():
     parser = ArgumentParser()
@@ -27,29 +24,16 @@ def argument_parser():
     parser.add_argument('-n', '--num-game', default=1000, type=int)
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--figure-path', type=str, default='figures/')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--load-model', action='store_true', default=False)
     return parser.parse_args()
 
 def main():
     args = argument_parser()
     configs = json.load(open('config.json'))
-    env = AgentFighting(args, configs, args.show_screen)
-    n_observations = env.get_space_size()
-    n_actions = env.n_actions
+    env = gym.make('CartPole-v1', render_mode='human')
+    n_observations, n_actions = env.observation_space.shape[0], env.action_space.n
     algorithm = None
-    model = AZNet(n_observations, n_actions)
-    
-    model_dir = os.path.dirname(args.model_path)
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
-        logging.info('Created model directory: {}'.format(model_dir))
-
-        
-    if not os.path.exists(args.figure_path):
-        os.makedirs(args.figure_path)
-        logging.info('Created figure directory: {}'.format(args.figure_path))
-        
+    model = GymNet(n_observations, n_actions)
     if args.algorithm == 'dqn':
         algorithm = DQN(n_observations, 
                         n_actions,
@@ -57,6 +41,10 @@ def main():
                         configs['model']['optimizer'],
                         configs['model']['lr'],
                         model_path=args.model_path)
+        model_dir = os.path.dirname(args.model_path)
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+            logging.info('Created model directory: {}'.format(model_dir))
         if args.load_model:
             algorithm.load_model(args.model_path)
             
@@ -67,28 +55,20 @@ def main():
     
     for episode in range(args.num_game):
         done = False
-        state = env.reset()
-        state = state['observation']
+        state, info = env.reset()
+        cnt = 0
         for cnt in count():
             env.render()
             action = algorithm.get_action(state)
-            next_state, reward, done = env.step(action)
-            next_state = next_state['observation']
+            next_state, reward, done, truncated, _ = env.step(action)
+            reward = reward if not done else -1
             algorithm.memorize(state, action, next_state, reward, done)
             state = next_state
-            history = algorithm.replay(configs['model']['batch_size'])
-            if history and args.verbose:
-                plt.figure(1)
-                plt.xlabel('Episode')
-                plt.ylabel('Loss')
-                plt.title('Training...')
-                plt.ion()
-                plt.plot(history['loss'], 'b')
-                plt.savefig(os.path.join(args.figure_path, 'loss.png'))
-            if done:
+            algorithm.replay(configs['model']['batch_size'])
+            if done or truncated:
                 break
             
-        algorithm.save_model(args.model_path)
+        algorithm.adaptiveEGreedy()
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
                 
     time.sleep(3)
