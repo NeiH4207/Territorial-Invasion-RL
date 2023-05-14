@@ -9,6 +9,7 @@ import logging
 import os
 import time
 from matplotlib import pyplot as plt
+import torch
 from Algorithms.RandomStep import RandomStep
 from models.AZNet import AZNet
 from src.environment import AgentFighting
@@ -38,7 +39,8 @@ def main():
     n_observations = env.get_space_size()
     n_actions = env.n_actions
     algorithm = None
-    model = AZNet(n_observations, n_actions)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = AZNet(n_observations, n_actions).to(device)
     
     model_dir = os.path.dirname(args.model_path)
     if not os.path.exists(model_dir):
