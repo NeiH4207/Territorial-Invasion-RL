@@ -92,7 +92,7 @@ def main():
             if done or truncated:
                 break
             
-        algorithm.replay(configs['model']['batch_size'], verbose=args.verbose)
+        algorithm.replay(args.batch_size, verbose=args.verbose)
         algorithm.adaptiveEGreedy()
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
                 
