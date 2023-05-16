@@ -154,8 +154,10 @@ class AZNet(nn.Module):
         torch.save(self.state_dict(), path)
         print("Model saved at {}".format(path))
         
-    def load(self, path=None):
+    def load(self, path=None, device=None):
+        if device is None:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if path is None:
             raise ValueError("Path is not defined")
-        self.load_state_dict(torch.load(path))
+        self.load_state_dict(torch.load(path, map_location=device))
         print('Model loaded from {}'.format(path))

@@ -10,10 +10,12 @@ import os
 import time
 
 import numpy as np
+import torch
 from Algorithms.RandomStep import RandomStep
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
 from Algorithms.DQN import DQN
+from Algorithms.DDQN import DDQN
 from models.GymNet import GymNet
 import gym
 
@@ -31,9 +33,10 @@ def main():
     env = gym.make('CartPole-v1')
     n_observations, n_actions = env.observation_space.shape[0], env.action_space.n
     algorithm = None
-    model = GymNet(n_observations, n_actions)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = GymNet(n_observations, n_actions).to(device)
     if args.algorithm == 'dqn':
-        algorithm = DQN(n_observations, 
+        algorithm = DDQN(n_observations, 
                         n_actions,
                         model,
                         configs['model']['optimizer'],
@@ -62,11 +65,11 @@ def main():
             reward = reward if not done else -1
             algorithm.memorize(state, action, next_state, reward, done)
             state = next_state
-            algorithm.replay(configs['model']['batch_size'])
             if done or truncated:
                 break
             
         algorithm.adaptiveEGreedy()
+        algorithm.replay(configs['model']['batch_size'])
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
                 
     time.sleep(3)

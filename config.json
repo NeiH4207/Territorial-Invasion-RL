@@ -1,20 +1,20 @@
 {
     "map":{
-        "height-min": 9,
-        "height-max": 9,
-        "width-min": 9,
-        "width-max": 9,
+        "height-min": 10,
+        "height-max": 25,
+        "width-min": 10,
+        "width-max": 25,
         "min-num-agents": 2,
         "max-num-agents": 5,
-        "min-num-turns": 100,
-        "max-num-turns": 100,
-        "num-castles": 5
+        "min-num-turns": 30,
+        "max-num-turns": 60,
+        "num-castles": 10
     }, 
     "model": {
-        "lr": 0.001,
+        "lr": 0.000001,
         "dropout": 0.1,
         "epochs": 20,
-        "batch_size": 64,
+        "batch_size": 128,
         "num_channels": 256,
         "optimizer": "adamw"
     }

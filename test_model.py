@@ -9,12 +9,13 @@ import logging
 import os
 import time
 from matplotlib import pyplot as plt
+import torch
 from Algorithms.RandomStep import RandomStep
 from models.AZNet import AZNet
 from src.environment import AgentFighting
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
-from Algorithms.DQN import DQN
+from Algorithms.DDQN import DDQN
 import matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
 
@@ -36,8 +37,9 @@ def main():
     env = AgentFighting(args, configs, args.show_screen)
     n_observations = env.get_space_size()
     n_actions = env.n_actions
-    model = AZNet(n_observations, n_actions)
-    dqn = DQN(n_observations, 
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = AZNet(n_observations, n_actions).to(device)
+    dqn = DDQN(n_observations, 
                     n_actions,
                     model,
                     configs['model']['optimizer'],
@@ -54,21 +56,21 @@ def main():
     
     for episode in range(args.num_game):
         done = False
-        state = env.reset()
-        state = state
+        state = env.get_state()
         for cnt in count():
             env.render()
             if state['player-id'] == 0:
-                action = random_step.get_action(state['observation'])
+                valid_actions = env.get_valid_actions()
+                action = dqn.get_action(state['observation'], valid_actions)
             else:
-                action = dqn.get_action(state['observation'])
+                valid_actions = env.get_valid_actions()
+                action = dqn.get_action(state['observation'], valid_actions)
             next_state, reward, done = env.step(action)
             state = next_state
             if done:
                 break
-            time.sleep(0.1)
-            
-        dqn.save_model(args.model_path)
+        print(env.state.scores)
+        env.reset()
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
                 
     time.sleep(3)

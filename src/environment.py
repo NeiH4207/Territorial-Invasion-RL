@@ -1,10 +1,12 @@
 from copy import deepcopy as dcopy
 import logging
+
+import numpy as np
 from Board.screen import Screen
 from src.player import Player
 from src.algorithms import *
 from src.state import State
-logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.NOTSET)
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 class AgentFighting(object):
     def __init__(self, args, configs, show_screen = False):
@@ -117,67 +119,44 @@ class AgentFighting(object):
             return 1
         else:
             return -1
-        
-    def step(self, action):
-        """
-        This function performs a single step of the game by taking an action as input. The action 
-        should be valid or else the function returns the reward. If the action is valid, then the 
-        function updates the state of the game and returns the reward.
-
-        Args:
-            action: The action to be taken in the game.
-
-        Returns:
-            reward: The reward obtained from the step.
-        """
-        if not self.is_valid_action(action):
-            logging.warning('Invalid action! - ' + str(action))
-            return self.get_state(), 0, self.game_ended()
-        action_type = self.get_type_action(action)
+    
+    def is_valid_action(self, action):
         current_player = self.state.current_player
-        agent_current_idx = self.state.agent_current_idx
         agent_coords_in_order = self.state.agent_coords_in_order
-        current_coord = agent_coords_in_order[current_player][agent_current_idx]
+        agent_current_idx = self.state.agent_current_idx
+        current_position = agent_coords_in_order[current_player][agent_current_idx]
+        
         is_valid_action = True
-        
-        previous_scores = self.state.scores
-        
+        action_type = self.get_type_action(action)
         if action_type[0] == 'Move':
             direction = action_type[1]
-            next_coord = (self.direction_map[direction][0] + current_coord[0],
-                          self.direction_map[direction][1] + current_coord[1])
-            if not self.in_bounds(next_coord):
+            next_position = (self.direction_map[direction][0] + current_position[0],
+                        self.direction_map[direction][1] + current_position[1])
+            if not self.in_bounds(next_position):
                 is_valid_action = False
                 
-            elif next_coord in self.state.agent_coords_in_order[0] or \
-                        next_coord in self.state.agent_coords_in_order[1]:
+            elif next_position in self.state.agent_coords_in_order[0] or \
+                        next_position in self.state.agent_coords_in_order[1]:
                 is_valid_action = False
                 
-            elif self.state.agents[current_player][next_coord[0]][next_coord[1]] == 1:
+            elif self.state.agents[current_player][next_position[0]][next_position[1]] == 1:
                 ''' in turn (N agent actions at the same time), only one agent can move at an area, 
                     so the other agent is moved into the same area befores
                     agents save next coordinates but agent_coords_in_order is not updated to check this '''
                 is_valid_action = False
                 
-            elif self.state.walls[0][next_coord[0]][next_coord[1]] == 1 \
-                    or self.state.walls[1][next_coord[0]][next_coord[1]] == 1:
+            elif self.state.walls[0][next_position[0]][next_position[1]] == 1 \
+                    or self.state.walls[1][next_position[0]][next_position[1]] == 1:
                 is_valid_action = False
                 
-            elif self.state.castles[next_coord[0]][next_coord[1]] == 1 \
-                    or self.state.castles[next_coord[0]][next_coord[1]] == 1:
+            elif self.state.castles[next_position[0]][next_position[1]] == 1 \
+                    or self.state.castles[next_position[0]][next_position[1]] == 1:
                 is_valid_action = False
-                
-            if is_valid_action:
-                self.state.agents[current_player][next_coord[0]][next_coord[1]] = 1
-                self.state.agents[current_player][current_coord[0]][current_coord[1]] = 0
-                if self.show_screen:
-                    self.screen.draw_agent(next_coord[0], next_coord[1], current_player)
-                    self.screen.make_empty_square(current_coord)
-            
+    
         elif action_type[0] == 'Build':
             direction = action_type[1]
-            wall_coord = (self.direction_map[direction][0] + current_coord[0],
-                          self.direction_map[direction][1] + current_coord[1])
+            wall_coord = (self.direction_map[direction][0] + current_position[0],
+                        self.direction_map[direction][1] + current_position[1])
             if not self.in_bounds(wall_coord):
                 is_valid_action = False
                 
@@ -192,6 +171,64 @@ class AgentFighting(object):
             elif wall_coord in self.state.agent_coords_in_order[0] or \
                         wall_coord in self.state.agent_coords_in_order[1]:
                 is_valid_action = False
+        elif action_type[0] == 'Destroy':
+            direction = action_type[1]
+            wall_coord = (self.direction_map[direction][0] + current_position[0],
+                        self.direction_map[direction][1] + current_position[1])
+            if not self.in_bounds(wall_coord):
+                is_valid_action = False
+                
+            elif self.state.walls[0][wall_coord[0]][wall_coord[1]] == 0 \
+                    and self.state.walls[1][wall_coord[0]][wall_coord[1]] == 0:
+                is_valid_action = False
+                
+        return is_valid_action
+        
+    def get_valid_actions(self):
+        valids = np.zeros(self.n_actions, dtype=bool)
+        
+        for action in range(self.n_actions):
+            valids[action] = self.is_valid_action(action)
+            
+        return valids
+                    
+    def step(self, action):
+        """
+        This function performs a single step of the game by taking an action as input. The action 
+        should be valid or else the function returns the reward. If the action is valid, then the 
+        function updates the state of the game and returns the reward.
+
+        Args:
+            action: The action to be taken in the game.
+
+        Returns:
+            reward: The reward obtained from the step.
+        """
+        
+        action_type = self.get_type_action(action)
+        current_player = self.state.current_player
+        agent_current_idx = self.state.agent_current_idx
+        agent_coords_in_order = self.state.agent_coords_in_order
+        current_position = agent_coords_in_order[current_player][agent_current_idx]
+        previous_scores = self.state.scores
+        is_valid_action = self.is_valid_action(action)
+        
+        if action_type[0] == 'Move':
+            direction = action_type[1]
+            next_position = (self.direction_map[direction][0] + current_position[0],
+                          self.direction_map[direction][1] + current_position[1])
+            
+            if is_valid_action:
+                self.state.agents[current_player][next_position[0]][next_position[1]] = 1
+                self.state.agents[current_player][current_position[0]][current_position[1]] = 0
+                if self.show_screen:
+                    self.screen.draw_agent(next_position[0], next_position[1], current_player)
+                    self.screen.make_empty_square(current_position)
+            
+        elif action_type[0] == 'Build':
+            direction = action_type[1]
+            wall_coord = (self.direction_map[direction][0] + current_position[0],
+                          self.direction_map[direction][1] + current_position[1])
                 
             if is_valid_action:
                 self.state.walls[current_player][wall_coord[0]][wall_coord[1]] = 1
@@ -200,15 +237,9 @@ class AgentFighting(object):
             
         elif action_type[0] == 'Destroy':
             direction = action_type[1]
-            wall_coord = (self.direction_map[direction][0] + current_coord[0],
-                          self.direction_map[direction][1] + current_coord[1])
-            if not self.in_bounds(wall_coord):
-                is_valid_action = False
-                
-            elif self.state.walls[0][wall_coord[0]][wall_coord[1]] == 0 \
-                    and self.state.walls[1][wall_coord[0]][wall_coord[1]] == 0:
-                is_valid_action = False
-                
+            wall_coord = (self.direction_map[direction][0] + current_position[0],
+                          self.direction_map[direction][1] + current_position[1])
+            
             if is_valid_action:
                 self.state.walls[0][wall_coord[0]][wall_coord[1]] = 0
                 self.state.walls[1][wall_coord[0]][wall_coord[1]] = 0
@@ -227,10 +258,10 @@ class AgentFighting(object):
             diff_previous_scores = previous_scores[current_player] - previous_scores[1 - current_player]
             diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
             reward = diff_new_score - diff_previous_scores
-            logging.info('Player: {} | AgentID: {} | Action: {} | Reward: {}'.format(
-                current_player, agent_current_idx, action_type, reward))
         else:
             reward = 0
+        # logging.info('Player: {} | AgentID: {} | Action: {} | Reward: {}'.format(
+        #     current_player, agent_current_idx, action_type, reward))
             
         self.state.agent_current_idx = (agent_current_idx + 1) % self.num_agents
         if self.state.agent_current_idx == 0:

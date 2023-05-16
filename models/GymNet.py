@@ -43,8 +43,8 @@ class GymNet(nn.Module):
             raise ValueError("Loss function not found")
         
     def predict(self, x):
-        output = self.forward(x).detach()
-        return output
+        output = self.forward(x)
+        return output.detach().cpu().numpy()
     
     def set_optimizer(self, optimizer, lr):
         if optimizer == "sgd":

@@ -7,6 +7,7 @@ from itertools import count
 import json
 import logging
 import os
+import time
 from matplotlib import pyplot as plt
 import torch
 from Algorithms.RandomStep import RandomStep
@@ -15,21 +16,17 @@ from src.environment import AgentFighting
 from src.utils import plot_history
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
-from Algorithms.DQN import DQN
-import matplotlib
-is_ipython = 'inline' in matplotlib.get_backend()
-
-plt.ion()
+from Algorithms.DDQN import DDQN
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=True)
+    parser.add_argument('--show-screen', type=bool, default=False)
     parser.add_argument('-a', '--algorithm', default='dqn')
-    parser.add_argument('-n', '--num-game', default=1000, type=int)
+    parser.add_argument('-n', '--num-game', default=100000, type=int)
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--figure-path', type=str, default='figures/')
-    parser.add_argument('--load-model', action='store_true', default=False)
+    parser.add_argument('--load-model', action='store_true', default=True)
     return parser.parse_args()
 
 def main():
@@ -53,7 +50,7 @@ def main():
         logging.info('Created figure directory: {}'.format(args.figure_path))
         
     if args.algorithm == 'dqn':
-        algorithm = DQN(n_observations, 
+        algorithm = DDQN(n_observations, 
                         n_actions,
                         model,
                         configs['model']['optimizer'],
@@ -73,22 +70,24 @@ def main():
     
     for episode in range(args.num_game):
         done = False
-        state = env.reset()
+        state = env.get_state()
         state = state['observation']
         for cnt in count():
             env.render()
-            action = algorithm.get_action(state)
+            valid_actions = env.get_valid_actions()
+            action = algorithm.get_action(state, valid_actions)
             next_state, reward, done = env.step(action)
             next_state = next_state['observation']
             algorithm.memorize(state, action, next_state, reward, done)
             state = next_state
-            history = algorithm.replay(configs['model']['batch_size'])
             env.save_image(os.path.join(args.figure_path, 'current_state.png'.format(episode, cnt)))
             if done:
+                print(env.state.scores)
                 break
+        history = algorithm.replay(configs['model']['batch_size'])
         if history and args.verbose:
             plot_history(history, args.figure_path)
-            
+        env.reset()
         algorithm.save_model(args.model_path)
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
 
