@@ -105,7 +105,7 @@ def main():
             if done:
                 print(env.state.scores)
                 break
-        history = algorithm.replay(configs['model']['batch_size'])
+        history = algorithm.replay(args.batch_size)
         if history and args.verbose:
             plot_history(history, args.figure_path)
         env.reset()
