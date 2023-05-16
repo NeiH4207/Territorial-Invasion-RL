@@ -10,21 +10,25 @@ import torch.nn as nn
 from tqdm import tqdm
 
 class DDQN():
-    def __init__(self, n_observations, n_actions, model, optimizer, learning_rate, model_path=None):
+    def __init__(self, n_observations=None, n_actions=None, model=None,
+                    optimizer='adam', lr=0.001, tau=0.005, gamma=0.99,
+                    epsilon=0.9, epsilon_min=0.05, epsilon_decay=0.99,
+                    memory_size=4096,  model_path=None):
         super().__init__()
         self.n_observations = n_observations
         self.n_actions = n_actions
-        self.memory = deque(maxlen=8096*4)
-        self.gamma = 0.99
-        self.epsilon = 0.5
-        self.epsilon_min = 0.1
-        self.epsilon_decay = 0.95
-        self.learning_rate = learning_rate
+        self.memory = deque(maxlen=memory_size)
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
+        self.learning_rate = lr
+        self.tau = tau
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.policy_net = model
         self.target_net = deepcopy(model)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.policy_net.set_optimizer(optimizer, learning_rate)  
+        self.policy_net.set_optimizer(optimizer, lr)  
         self.model_path = model_path
         self.history = {
             'loss': [],
@@ -51,12 +55,14 @@ class DDQN():
             act_values[~valid_actions] = -float('inf')
         return int(np.argmax(act_values))  # returns action
         
-    def replay(self, batch_size):
+    def replay(self, batch_size, verbose=False):
 
         if len(self.memory) < batch_size:
             return 0 # memory is still not full
-        
-        _tqdm = tqdm(range(len(self.memory) // batch_size + 1), desc='Replay')
+        if verbose:
+            _tqdm = tqdm(range(len(self.memory) // batch_size + 1), desc='Replay')
+        else:
+            _tqdm = range(len(self.memory) // batch_size + 1)
         total_loss = 0
         
         for i in _tqdm:
@@ -100,9 +106,8 @@ class DDQN():
         
             target_net_state_dict = self.target_net.state_dict()
             policy_net_state_dict = self.policy_net.state_dict()
-            TAU = 0.005
             for key in policy_net_state_dict:
-                target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
+                target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
             self.target_net.load_state_dict(target_net_state_dict)
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)

@@ -1,21 +1,13 @@
 {
     "map":{
-        "height-min": 10,
+        "height-min": 11,
         "height-max": 25,
-        "width-min": 10,
+        "width-min": 11,
         "width-max": 25,
         "min-num-agents": 2,
         "max-num-agents": 5,
         "min-num-turns": 30,
-        "max-num-turns": 60,
+        "max-num-turns": 100,
         "num-castles": 10
-    }, 
-    "model": {
-        "lr": 0.000001,
-        "dropout": 0.1,
-        "epochs": 20,
-        "batch_size": 128,
-        "num_channels": 256,
-        "optimizer": "adamw"
     }
 }

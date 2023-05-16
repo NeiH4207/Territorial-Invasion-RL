@@ -22,11 +22,25 @@ def argument_parser():
     parser = ArgumentParser()
     parser.add_argument('--show-screen', type=bool, default=False)
     parser.add_argument('-a', '--algorithm', default='dqn')
-    parser.add_argument('-n', '--num-game', default=100000, type=int)
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
-    parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--figure-path', type=str, default='figures/')
+    
+    # DDQN arguments
+    parser.add_argument('--gamma', type=float, default=0.99)
+    parser.add_argument('--tau', type=int, default=1000)
+    parser.add_argument('--epsilon', type=float, default=0.9)
+    parser.add_argument('--epsilon-min', type=float, default=0.1)
+    parser.add_argument('--epsilon-decay', type=float, default=0.995)
+    
+    # model training arguments
+    parser.add_argument('--lr', type=float, default=1e-5)
+    parser.add_argument('--batch-size', type=int, default=128)
+    parser.add_argument('--optimizer', type=str, default='adamw')
+    parser.add_argument('--memory-size', type=int, default=32768)
+    parser.add_argument('--num-episodes', type=int, default=100000)
+    parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--load-model', action='store_true', default=True)
+    
     return parser.parse_args()
 
 def main():
@@ -50,12 +64,19 @@ def main():
         logging.info('Created figure directory: {}'.format(args.figure_path))
         
     if args.algorithm == 'dqn':
-        algorithm = DDQN(n_observations, 
-                        n_actions,
-                        model,
-                        configs['model']['optimizer'],
-                        configs['model']['lr'],
-                        model_path=args.model_path)
+        algorithm = DDQN(   n_observations=n_observations, 
+                            n_actions=n_actions,
+                            model=model,
+                            optimizer=args.optimizer,
+                            lr=args.lr,
+                            tau=args.tau,
+                            gamma=args.gamma,
+                            epsilon=args.epsilon,
+                            epsilon_min=args.epsilon_min,
+                            epsilon_decay=args.epsilon_decay,
+                            memory_size=args.memory_size,
+                            model_path=args.model_path
+                        )
         if args.load_model:
             algorithm.load_model(args.model_path)
             
@@ -68,7 +89,7 @@ def main():
     else:
         raise ValueError('Algorithm {} is not supported'.format(args.algorithm))
     
-    for episode in range(args.num_game):
+    for episode in range(args.num_episodes):
         done = False
         state = env.get_state()
         state = state['observation']
@@ -88,6 +109,7 @@ def main():
         if history and args.verbose:
             plot_history(history, args.figure_path)
         env.reset()
+        algorithm.adaptiveEGreedy()
         algorithm.save_model(args.model_path)
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
 

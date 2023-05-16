@@ -43,6 +43,7 @@ class GymNet(nn.Module):
             raise ValueError("Loss function not found")
         
     def predict(self, x):
+        x = x.reshape(-1, self.n_observations)
         output = self.forward(x)
         return output.detach().cpu().numpy()
     
