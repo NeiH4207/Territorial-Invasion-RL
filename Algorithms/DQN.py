@@ -13,8 +13,8 @@ logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 class DQN():
     def __init__(self, n_observations=None, n_actions=None, model=None,
-                    optimizer='adam', lr=0.001, tau=0.005, gamma=0.99,
-                    epsilon=0.9, epsilon_min=0.05, epsilon_decay=0.99,
+                    tau=0.005, gamma=0.99, epsilon=0.9, epsilon_min=0.05, 
+                    epsilon_decay=0.99,
                     memory_size=4096,  model_path=None):
         super().__init__()
         self.n_observations = n_observations
@@ -24,13 +24,10 @@ class DQN():
         self.epsilon = epsilon
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
-        self.learning_rate = lr
         self.tau = tau
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.policy_net = model
         self.target_net = deepcopy(model)
-        self.policy_net.set_optimizer(optimizer, lr)  
-        self.target_net.set_optimizer(optimizer, lr)
         self.model_path = model_path
         self.history = {
             'loss': [],

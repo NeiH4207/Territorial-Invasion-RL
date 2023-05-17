@@ -62,7 +62,7 @@ class OutBlock(nn.Module):
     
     
 class DQN(nn.Module):
-    def __init__(self, input_shape, output_shape, dueling=True):
+    def __init__(self, input_shape, output_shape, optimizer='adamw', lr=0.001, dueling=True):
         super(DQN, self).__init__()
         # game params
         self.name = 'nnet9x9'
@@ -72,7 +72,6 @@ class DQN(nn.Module):
         self.output_shape = output_shape
         self.in_channels = input_shape[0]
         self.elo_history = np.array([0])
-        self.optimizer = None
         
         self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
                                stride=config['conv1-stride'], padding=config['conv1-padding'])
@@ -97,6 +96,8 @@ class DQN(nn.Module):
         self.out_conv3_dim = int((self.out_conv2_dim - config['conv3-kernel-size'] + 2 * config['conv3-padding']) / config['conv3-stride'] + 1)
         self.flatten_dim = config['conv3-num-filter'] * ((self.out_conv3_dim) ** 2)
         self.outblock = OutBlock(config, self.flatten_dim, output_shape, dueling=dueling)
+        
+        self.set_optimizer(optimizer, lr)
     
     def forward(self, s):
         s = F.dropout(F.relu(self.bn1(self.conv1(s))), p=0.3, training=self.training)
@@ -188,6 +189,5 @@ class DQN(nn.Module):
         checkpoint = torch.load(path, map_location=device)
         self.elo_history = checkpoint['elo_history']
         self.load_state_dict(checkpoint['state_dict'])
-        if self.optimizer is not None:
-            self.optimizer.load_state_dict(checkpoint['optimizer'])
+        self.optimizer.load_state_dict(checkpoint['optimizer'])
         print('Model loaded from {}'.format(path))

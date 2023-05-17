@@ -13,12 +13,12 @@ from Algorithms.DQN import DQN
 
 class DDQN(DQN):
     def __init__(self, n_observations=None, n_actions=None, model=None,
-                    optimizer='adam', lr=0.001, tau=0.005, gamma=0.99,
-                    epsilon=0.9, epsilon_min=0.05, epsilon_decay=0.99,
+                    tau=0.005, gamma=0.99, epsilon=0.9, epsilon_min=0.05, 
+                    epsilon_decay=0.99,
                     memory_size=4096,  model_path=None):
-        super().__init__(n_observations, n_actions, model, optimizer, 
-                         lr, tau, gamma, epsilon, epsilon_min, 
-                         epsilon_decay, memory_size, model_path)
+        super().__init__(n_observations, n_actions, model, tau, 
+                         gamma, epsilon, epsilon_min, epsilon_decay,
+                         memory_size, model_path)
         
     def replay(self, batch_size, verbose=False):
 

@@ -51,7 +51,10 @@ def main():
     n_actions = env.n_actions
     algorithm = None
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = DQN(n_observations, n_actions, dueling=True).to(device)
+    model = DQN(n_observations, n_actions, 
+                optimizer=args.optimizer, 
+                lr=args.lr,
+                dueling=True).to(device)
     if args.load_model:
         model.load(args.model_path, device)
     evaluator = Evaluator(AgentFighting(args, configs, False), n_evals=args.n_evals, device=device)
@@ -70,8 +73,6 @@ def main():
         algorithm = DDQN(   n_observations=n_observations, 
                             n_actions=n_actions,
                             model=model,
-                            optimizer=args.optimizer,
-                            lr=args.lr,
                             tau=args.tau,
                             gamma=args.gamma,
                             epsilon=args.epsilon,
