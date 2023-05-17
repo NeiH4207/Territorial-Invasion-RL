@@ -27,6 +27,7 @@ def plot_elo(ratings, save_dir):
     ax.grid(True)
     save_path = os.path.join(save_dir, 'elo.png')
     plt.savefig(save_path)
+    plt.close()
 
 
 def flatten(data):
