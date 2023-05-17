@@ -24,7 +24,7 @@ plt.ion()
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=False)
+    parser.add_argument('--show-screen', type=bool, default=True)
     parser.add_argument('-a', '--algorithm', default='dqn')
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     parser.add_argument('--figure-path', type=str, default='figures/')
@@ -43,8 +43,8 @@ def argument_parser():
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=10)
-    parser.add_argument('--model-path-1', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet.pt')
+    parser.add_argument('--model-path-1', type=str, default='trained_models/nnet2.pt')
+    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet2.pt')
     parser.add_argument('--load-model', action='store_true', default=True)
     return parser.parse_args()
 
@@ -65,8 +65,6 @@ def main():
     evaluator = Evaluator(env, n_evals=args.n_evals, device=device)
     
     evaluator.eval(model_1, model_2, change_elo=False)
-                
-    time.sleep(3)
 
 if __name__ == "__main__":
     main()

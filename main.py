@@ -10,17 +10,18 @@ import os
 import time
 import torch
 from src.evaluator import Evaluator
-from models.DQN import DQN
 from src.environment import AgentFighting
 from src.utils import plot_elo
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 from argparse import ArgumentParser
+from models.DQN import DQN
 from Algorithms.DDQN import DDQN
+from Algorithms.PER import PER
 
 def argument_parser():
     parser = ArgumentParser()
     parser.add_argument('--show-screen', type=bool, default=False)
-    parser.add_argument('-a', '--algorithm', default='dqn')
+    parser.add_argument('-a', '--algorithm', default='per')
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
     parser.add_argument('--n-evals', type=int, default=5)
@@ -80,6 +81,22 @@ def main():
                             epsilon_decay=args.epsilon_decay,
                             memory_size=args.memory_size,
                             model_path=args.model_path
+                        )
+    elif args.algorithm == 'per':
+        algorithm = PER(   n_observations=n_observations, 
+                            n_actions=n_actions,
+                            model=model,
+                            tau=args.tau,
+                            gamma=args.gamma,
+                            epsilon=args.epsilon,
+                            epsilon_min=args.epsilon_min,
+                            epsilon_decay=args.epsilon_decay,
+                            memory_size=args.memory_size,
+                            model_path=args.model_path,
+                            batch_size=args.batch_size,
+                            alpha=0.2,
+                            beta=0.6,
+                            prior_eps=1e-6
                         )
 
     elif args.algorithm == 'pso':

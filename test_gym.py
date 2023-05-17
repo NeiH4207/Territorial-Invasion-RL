@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 from argparse import ArgumentParser
 from Algorithms.DQN import DQN
 from Algorithms.DDQN import DDQN
+from Algorithms.PER import PER
 from models.GymNet import GymNet
 import gym
 
@@ -23,7 +24,7 @@ def argument_parser():
     parser = ArgumentParser()
     # Game options
     parser.add_argument('--show-screen', type=bool, default=False)
-    parser.add_argument('-a', '--algorithm', default='dqn')
+    parser.add_argument('-a', '--algorithm', default='per')
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('--figure-path', type=str, default='figures/')
     
@@ -51,6 +52,7 @@ def main():
     algorithm = None
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = GymNet(n_observations, n_actions).to(device)
+    model.set_optimizer(args.optimizer, args.lr)
     if args.algorithm == 'dqn':
         algorithm = DQN(   n_observations=n_observations, 
                             n_actions=n_actions,
@@ -66,19 +68,35 @@ def main():
                             model_path=args.model_path
                         )
         
-        if args.model_path:
-            model_dir = os.path.dirname(args.model_path)
-            if not os.path.exists(model_dir):
-                os.makedirs(model_dir)
-                logging.info('Created model directory: {}'.format(model_dir))
-            if args.load_model:
-                algorithm.load_model(args.model_path)
-            
+    elif args.algorithm == 'per':
+        algorithm = PER(   n_observations=n_observations, 
+                            n_actions=n_actions,
+                            model=model,
+                            tau=args.tau,
+                            gamma=args.gamma,
+                            epsilon=args.epsilon,
+                            epsilon_min=args.epsilon_min,
+                            epsilon_decay=args.epsilon_decay,
+                            memory_size=args.memory_size,
+                            model_path=args.model_path,
+                            batch_size=args.batch_size,
+                            alpha=0.2,
+                            beta=0.6,
+                            prior_eps=1e-6
+                        )
     elif args.algorithm == 'random':
         algorithm = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)
     else:
         raise ValueError('Algorithm {} is not supported'.format(args.algorithm))
-    
+
+    if args.model_path:
+        model_dir = os.path.dirname(args.model_path)
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+            logging.info('Created model directory: {}'.format(model_dir))
+        if args.load_model:
+            algorithm.load_model(args.model_path)
+        
     for episode in range(args.num_episodes):
         done = False
         state, info = env.reset()
