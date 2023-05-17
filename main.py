@@ -39,7 +39,7 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--load-model', action='store_true', default=False)
     
     return parser.parse_args()
 
@@ -52,6 +52,8 @@ def main():
     algorithm = None
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = DQN(n_observations, n_actions, dueling=True).to(device)
+    if args.load_model:
+        model.load(args.model_path, device)
     evaluator = Evaluator(AgentFighting(args, configs, False), n_evals=args.n_evals, device=device)
     
     model_dir = os.path.dirname(args.model_path)
@@ -78,8 +80,6 @@ def main():
                             memory_size=args.memory_size,
                             model_path=args.model_path
                         )
-        if args.load_model:
-            algorithm.load_model(args.model_path)
 
     elif args.algorithm == 'pso':
         return

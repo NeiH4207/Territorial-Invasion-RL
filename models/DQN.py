@@ -72,6 +72,7 @@ class DQN(nn.Module):
         self.output_shape = output_shape
         self.in_channels = input_shape[0]
         self.elo_history = np.array([0])
+        self.optimizer = None
         
         self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
                                stride=config['conv1-stride'], padding=config['conv1-padding'])
@@ -171,11 +172,12 @@ class DQN(nn.Module):
         if path is None:
             logging.error('Model path not specified')
         state_dict = self.state_dict()
-        _dict = {
+        checkpoint = {
             'elo_history': self.elo_history,
-            'state_dict': state_dict
+            'state_dict': state_dict,
+            'optimizer': self.optimizer.state_dict(),
         }
-        torch.save(_dict, path)
+        torch.save(checkpoint, path)
         logging.info('Model saved to {}'.format(path))
         
     def load(self, path=None, device=None):
@@ -183,7 +185,9 @@ class DQN(nn.Module):
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if path is None:
             raise ValueError("Path is not defined")
-        _dict = torch.load(path, map_location=device)
-        self.elo_history = _dict['elo_history']
-        self.load_state_dict(_dict['state_dict'])
+        checkpoint = torch.load(path, map_location=device)
+        self.elo_history = checkpoint['elo_history']
+        self.load_state_dict(checkpoint['state_dict'])
+        if self.optimizer is not None:
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
         print('Model loaded from {}'.format(path))

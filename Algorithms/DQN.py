@@ -29,8 +29,8 @@ class DQN():
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.policy_net = model
         self.target_net = deepcopy(model)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
         self.policy_net.set_optimizer(optimizer, lr)  
+        self.target_net.set_optimizer(optimizer, lr)
         self.model_path = model_path
         self.history = {
             'loss': [],
