@@ -51,7 +51,7 @@ class Evaluator():
                 if state['player-id'] == 0:
                     valid_actions = self.env.get_valid_actions()
                     torch_state = torch.FloatTensor(np.array(state['observation'])).to(self.device)
-                    act_values = old_model.predict(torch_state)[0]
+                    act_values = new_model.predict(torch_state)[0]
                     if valid_actions is not None:
                         act_values[~valid_actions] = -float('inf')
                     action = int(np.argmax(act_values))
@@ -68,7 +68,7 @@ class Evaluator():
                 if done:
                     break
             winner = self.env.get_winner()
-            if winner == 1:
+            if winner == 0:
                 num_wins += 1
             elo_1, elo_2 = self.compute_elo(elo_1, elo_2, winner)
             self.env.reset()

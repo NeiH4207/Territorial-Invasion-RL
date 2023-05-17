@@ -39,7 +39,7 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--load-model', action='store_true', default=False)
     
     return parser.parse_args()
 
