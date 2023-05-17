@@ -9,51 +9,16 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-class DDQN():
+from Algorithms.DQN import DQN
+
+class DDQN(DQN):
     def __init__(self, n_observations=None, n_actions=None, model=None,
                     optimizer='adam', lr=0.001, tau=0.005, gamma=0.99,
                     epsilon=0.9, epsilon_min=0.05, epsilon_decay=0.99,
                     memory_size=4096,  model_path=None):
-        super().__init__()
-        self.n_observations = n_observations
-        self.n_actions = n_actions
-        self.memory = deque(maxlen=memory_size)
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.epsilon_min = epsilon_min
-        self.epsilon_decay = epsilon_decay
-        self.learning_rate = lr
-        self.tau = tau
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.policy_net = model
-        self.target_net = deepcopy(model)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.policy_net.set_optimizer(optimizer, lr)  
-        self.model_path = model_path
-        self.history = {
-            'loss': [],
-            'reward': []
-        }
-    
-    def memorize(self, state, action, next_state, reward, done):
-        # storage
-        self.memory.append((state, action, next_state, reward, done))
-        
-    def get_action(self, state, valid_actions=None, epsilon=None):
-        if epsilon is None:
-            epsilon = self.epsilon
-        if np.random.rand() <= epsilon:
-            if valid_actions is None:
-                return random.randrange(self.n_actions)
-            else:
-                valid_action_list = [i for i in range(self.n_actions) if valid_actions[i]]
-                return random.choice(valid_action_list)
-        state = torch.FloatTensor(np.array(state)).to(self.device)
-        act_values = self.policy_net.predict(state)[0]
-        # set value of invalid actions to -inf
-        if valid_actions is not None:
-            act_values[~valid_actions] = -float('inf')
-        return int(np.argmax(act_values))  # returns action
+        super().__init__(n_observations, n_actions, model, optimizer, 
+                         lr, tau, gamma, epsilon, epsilon_min, 
+                         epsilon_decay, memory_size, model_path)
         
     def replay(self, batch_size, verbose=False):
 
@@ -83,7 +48,10 @@ class DDQN():
             
             next_state_values = torch.zeros(batch_size, device=self.device)
             with torch.no_grad():
-                next_state_values = self.target_net(torch.stack(next_state_batch, axis=0)).max(1)[0]
+                next_action_batch = self.policy_net(torch.stack(next_state_batch, axis=0)).max(1)[1]
+                next_state_values = self.target_net(torch.stack(next_state_batch, axis=0))
+                next_state_values = next_state_values.gather(1, next_action_batch.reshape(-1, 1)).squeeze()
+                
                 
             state_batch = torch.stack(state_batch, axis=0)
             action_batch = torch.cat(action_batch)
@@ -114,13 +82,3 @@ class DDQN():
         self.history['loss'].append(mean_loss)
         return self.history
         
-    def adaptiveEGreedy(self):
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
-        
-    def load_model(self, path):
-        self.policy_net.load(path)
-        self.target_net = deepcopy(self.policy_net)
-        
-    def save_model(self, path):
-        self.policy_net.save(path)

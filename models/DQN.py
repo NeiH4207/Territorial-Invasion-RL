@@ -29,7 +29,7 @@ class ResBlock(nn.Module):
         return out
     
 class OutBlock(nn.Module):
-    def __init__(self, config, input_shape, output_shape):
+    def __init__(self, config, input_shape, output_shape, dueling=True):
         super(OutBlock, self).__init__()
         self.config = config
         self.device = 'cuda' if T.cuda.is_available() else 'cpu'
@@ -39,19 +39,31 @@ class OutBlock(nn.Module):
         self.fc2 = nn.Linear(config['fc1-num-units'], config['fc2-num-units'])
         self.fc_bn2 = nn.BatchNorm1d(config['fc2-num-units'])
         
-        self.fc3 = nn.Linear(config['fc2-num-units'], output_shape)
+        self.dueling = dueling
+        if self.dueling:
+            self.value = nn.Linear(config['fc2-num-units'], output_shape)
+            self.advance = nn.Linear(config['fc2-num-units'], output_shape)
+        else:
+            self.Qvalue = nn.Linear(config['fc2-num-units'], output_shape)
     
     def forward(self, s):
         out = F.dropout(F.relu(self.fc1(s)), p=self.config['fc1-dropout'], training=self.training)  # batch_size x 1024
         out = F.relu(self.fc2(out))
-        pi =self.fc3(out) 
-        return pi
+        if self.dueling:
+            value = self.value(out) 
+            adv = self.advance(out) 
+            mean_adv = torch.mean(adv, dim=1, keepdim=True)
+            Qvalue = value + adv - mean_adv
+        else:
+            Qvalue = self.Qvalue(out) 
+        return Qvalue
     
-class AZNet(nn.Module):
-    def __init__(self, input_shape, output_shape):
-        super(AZNet, self).__init__()
+    
+class DQN(nn.Module):
+    def __init__(self, input_shape, output_shape, dueling=True):
+        super(DQN, self).__init__()
         # game params
-        self.name = 'nnet6x6'
+        self.name = 'nnet9x9'
         config = ModelConfig[self.name]
         self.config = config
         self.input_shape = input_shape
@@ -71,8 +83,6 @@ class AZNet(nn.Module):
         self.bn2 = nn.BatchNorm2d(config['conv2-num-filter'])
         self.bn3 = nn.BatchNorm2d(config['conv3-num-filter'])
         
-        self.avg_pool = nn.AvgPool2d(2)
-        
         for block in range(config['num-resblocks']):
             setattr(self, "res_%i" % block,ResBlock(config['conv3-num-filter'],
                                                     config['conv3-num-filter'],
@@ -82,8 +92,8 @@ class AZNet(nn.Module):
         self.out_conv1_dim = int((self.board_x - config['conv1-kernel-size'] + 2 * config['conv1-padding']) / config['conv1-stride'] + 1)
         self.out_conv2_dim = int((self.out_conv1_dim - config['conv2-kernel-size'] + 2 * config['conv2-padding']) / config['conv2-stride'] + 1)
         self.out_conv3_dim = int((self.out_conv2_dim - config['conv3-kernel-size'] + 2 * config['conv3-padding']) / config['conv3-stride'] + 1)
-        self.flatten_dim = config['conv3-num-filter'] * ((self.out_conv3_dim >> 1) ** 2)
-        self.outblock = OutBlock(config, self.flatten_dim, output_shape)
+        self.flatten_dim = config['conv3-num-filter'] * ((self.out_conv3_dim) ** 2)
+        self.outblock = OutBlock(config, self.flatten_dim, output_shape, dueling=dueling)
     
     def forward(self, s):
         s = F.dropout(F.relu(self.bn1(self.conv1(s))), p=0.3, training=self.training)
@@ -93,7 +103,6 @@ class AZNet(nn.Module):
         for block in range(self.config['num-resblocks']):
             s = getattr(self, "res_%i" % block)(s)
             
-        s = self.avg_pool(s)               
         s = s.view(-1, self.flatten_dim)
         s = self.outblock(s)
         return s

@@ -30,7 +30,7 @@ def argument_parser():
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--tau', type=int, default=0.005)
-    parser.add_argument('--epsilon', type=float, default=0.9)
+    parser.add_argument('--epsilon', type=float, default=0.5)
     parser.add_argument('--epsilon-min', type=float, default=0.005)
     parser.add_argument('--epsilon-decay', type=float, default=0.95)
     
@@ -38,22 +38,21 @@ def argument_parser():
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--optimizer', type=str, default='adamw')
-    parser.add_argument('--memory-size', type=int, default=32768)
+    parser.add_argument('--memory-size', type=int, default=4096)
     parser.add_argument('--num-episodes', type=int, default=100000)
-    parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=False)
+    parser.add_argument('--model-path', type=str, default=None)
+    
     return parser.parse_args()
 
 def main():
     args = argument_parser()
-    configs = json.load(open('config.json'))
     env = gym.make('CartPole-v1')
     n_observations, n_actions = env.observation_space.shape[0], env.action_space.n
     algorithm = None
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = GymNet(n_observations, n_actions).to(device)
     if args.algorithm == 'dqn':
-        algorithm = DDQN(   n_observations=n_observations, 
+        algorithm = DQN(   n_observations=n_observations, 
                             n_actions=n_actions,
                             model=model,
                             optimizer=args.optimizer,
@@ -66,12 +65,14 @@ def main():
                             memory_size=args.memory_size,
                             model_path=args.model_path
                         )
-        model_dir = os.path.dirname(args.model_path)
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-            logging.info('Created model directory: {}'.format(model_dir))
-        if args.load_model:
-            algorithm.load_model(args.model_path)
+        
+        if args.model_path:
+            model_dir = os.path.dirname(args.model_path)
+            if not os.path.exists(model_dir):
+                os.makedirs(model_dir)
+                logging.info('Created model directory: {}'.format(model_dir))
+            if args.load_model:
+                algorithm.load_model(args.model_path)
             
     elif args.algorithm == 'random':
         algorithm = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)

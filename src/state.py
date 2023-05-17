@@ -17,7 +17,7 @@ class State(Map):
         self.alpha = 1
         self.beta = 10
         self.gamma = 1
-        self.limit_obs_size = 4
+        self.limit_obs_size = 5
         
     @property
     def scores(self):

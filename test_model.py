@@ -11,7 +11,7 @@ import time
 from matplotlib import pyplot as plt
 import torch
 from Algorithms.RandomStep import RandomStep
-from models.AZNet import AZNet
+from models.DQN import DQN
 from src.environment import AgentFighting
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
@@ -23,12 +23,27 @@ plt.ion()
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=True)
+    parser.add_argument('--show-screen', type=bool, default=False)
     parser.add_argument('-a', '--algorithm', default='dqn')
-    parser.add_argument('-n', '--num-game', default=1000, type=int)
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
-    parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--figure-path', type=str, default='figures/')
+    
+    # DDQN arguments
+    parser.add_argument('--gamma', type=float, default=0.99)
+    parser.add_argument('--tau', type=int, default=0.005)
+    parser.add_argument('--epsilon', type=float, default=0.9)
+    parser.add_argument('--epsilon-min', type=float, default=0.1)
+    parser.add_argument('--epsilon-decay', type=float, default=0.995)
+    
+    # model training arguments
+    parser.add_argument('--lr', type=float, default=1e-5)
+    parser.add_argument('--batch-size', type=int, default=128)
+    parser.add_argument('--optimizer', type=str, default='adamw')
+    parser.add_argument('--memory-size', type=int, default=32768)
+    parser.add_argument('--num-episodes', type=int, default=10)
+    parser.add_argument('--model-path-1', type=str, default='trained_models/nnet.pt')
+    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet.pt')
+    parser.add_argument('--load-model', action='store_true', default=False)
     return parser.parse_args()
 
 def main():
@@ -38,33 +53,33 @@ def main():
     n_observations = env.get_space_size()
     n_actions = env.n_actions
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = AZNet(n_observations, n_actions).to(device)
-    dqn = DDQN(n_observations, 
-                    n_actions,
-                    model,
-                    configs['model']['optimizer'],
-                    configs['model']['lr'],
-                    model_path=args.model_path)
-    model_dir = os.path.dirname(args.model_path)
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
-        logging.info('Created model directory: {}'.format(model_dir))
-    if args.load_model:
-        dqn.load_model(args.model_path)
-        
-    random_step = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)
+    model_1 = DQN(n_observations, n_actions, dueling=True).to(device)
+    model_2 = DQN(n_observations, n_actions, dueling=True).to(device)
     
-    for episode in range(args.num_game):
+    dqn_1 = DDQN(   n_observations=n_observations, 
+                    n_actions=n_actions,
+                    model=model_1
+                )
+    dqn_2 = DDQN(   n_observations=n_observations, 
+                    n_actions=n_actions,
+                    model=model_2
+                )
+    
+    if args.load_model:
+        dqn_1.load_model(args.model_path_1)
+        dqn_2.load_model(args.model_path_2)
+    
+    for episode in range(args.num_episodes):
         done = False
         state = env.get_state()
         for cnt in count():
             env.render()
             if state['player-id'] == 0:
                 valid_actions = env.get_valid_actions()
-                action = dqn.get_action(state['observation'], valid_actions)
+                action = dqn_1.get_action(state['observation'], valid_actions, epsilon=0)
             else:
                 valid_actions = env.get_valid_actions()
-                action = dqn.get_action(state['observation'], valid_actions)
+                action = dqn_2.get_action(state['observation'], valid_actions, epsilon=0)
             next_state, reward, done = env.step(action)
             state = next_state
             if done:

@@ -4,7 +4,6 @@ import logging
 import numpy as np
 from Board.screen import Screen
 from src.player import Player
-from src.algorithms import *
 from src.state import State
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
@@ -114,9 +113,9 @@ class AgentFighting(object):
         :return: An integer representing the winner of the game.
         """
         if self.state.scores[0] > self.state.scores[1]:
-            return 0
+            return 'First Player'
         elif self.state.scores[1] > self.state.scores[0]:
-            return 1
+            return 'Second Player'
         else:
             return -1
     
@@ -192,7 +191,7 @@ class AgentFighting(object):
             
         return valids
                     
-    def step(self, action):
+    def step(self, action, verbose=False):
         """
         This function performs a single step of the game by taking an action as input. The action 
         should be valid or else the function returns the reward. If the action is valid, then the 
@@ -260,8 +259,10 @@ class AgentFighting(object):
             reward = diff_new_score - diff_previous_scores
         else:
             reward = 0
-        # logging.info('Player: {} | AgentID: {} | Action: {} | Reward: {}'.format(
-        #     current_player, agent_current_idx, action_type, reward))
+        
+        if verbose:
+            logging.info('Player: {} | AgentID: {} | Action: {} | Reward: {}'.format(
+                current_player, agent_current_idx, action_type, reward))
             
         self.state.agent_current_idx = (agent_current_idx + 1) % self.num_agents
         if self.state.agent_current_idx == 0:

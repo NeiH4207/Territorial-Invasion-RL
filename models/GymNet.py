@@ -15,14 +15,19 @@ class GymNet(nn.Module):
         self.n_actions = n_actions
         self.layer1 = nn.Linear(n_observations, 128)
         self.layer2 = nn.Linear(128, 128)
-        self.layer3 = nn.Linear(128, n_actions)
+        self.value = nn.Linear(128, n_actions)
+        self.advance = nn.Linear(128, n_actions)
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
-        return self.layer3(x)
+        value = self.value(x) 
+        adv = self.advance(x) 
+        mean_adv = torch.mean(adv, dim=1, keepdim=True)
+        Q = value + adv - mean_adv
+        return Q 
         
     def set_loss_function(self, loss):
         if loss == "mse":

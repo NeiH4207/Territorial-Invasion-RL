@@ -11,7 +11,7 @@ import time
 from matplotlib import pyplot as plt
 import torch
 from Algorithms.RandomStep import RandomStep
-from models.AZNet import AZNet
+from models.DQN import DQN
 from src.environment import AgentFighting
 from src.utils import plot_history
 log = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ def argument_parser():
     
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
-    parser.add_argument('--tau', type=int, default=1000)
+    parser.add_argument('--tau', type=int, default=0.005)
     parser.add_argument('--epsilon', type=float, default=0.9)
     parser.add_argument('--epsilon-min', type=float, default=0.1)
     parser.add_argument('--epsilon-decay', type=float, default=0.995)
@@ -39,7 +39,7 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--load-model', action='store_true', default=False)
     
     return parser.parse_args()
 
@@ -51,7 +51,7 @@ def main():
     n_actions = env.n_actions
     algorithm = None
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = AZNet(n_observations, n_actions).to(device)
+    model = DQN(n_observations, n_actions, dueling=True).to(device)
     
     model_dir = os.path.dirname(args.model_path)
     if not os.path.exists(model_dir):
@@ -105,7 +105,7 @@ def main():
             if done:
                 print(env.state.scores)
                 break
-        history = algorithm.replay(args.batch_size)
+        history = algorithm.replay(args.batch_size, verbose=args.verbose)
         if history and args.verbose:
             plot_history(history, args.figure_path)
         env.reset()
