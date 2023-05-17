@@ -37,12 +37,12 @@ class Evaluator():
         rn1 = rn1 if rn1 > 0 else 0
         return (rn0, rn1)
         
-    def eval(self, old_model, new_model):
+    def eval(self, old_model, new_model, change_elo=True):
         
         elo_1 = old_model.get_elo()
         elo_2 = new_model.get_elo()
-        old_elo_1 = elo_1
-        old_elo_2 = elo_2
+        old_elo = elo_2
+        num_wins = 0
         
         for _ in tqdm(range(self.n_evals), desc='Evaluating'):
             done = False
@@ -68,10 +68,19 @@ class Evaluator():
                 if done:
                     break
             winner = self.env.get_winner()
+            if winner == 1:
+                num_wins += 1
             elo_1, elo_2 = self.compute_elo(elo_1, elo_2, winner)
             self.env.reset()
         
-        old_model.set_elo(elo_1)
-        new_model.set_elo(elo_2)
-        logging.info('Elo changes from {} to {}'.format(old_elo_2, elo_2))
-        return elo_2 > old_elo_2
+        if change_elo:
+            old_model.set_elo(elo_1)
+            new_model.set_elo(elo_2)
+            logging.info('Elo changes from {} to {} | Win {}/{}'.\
+                format(old_elo, elo_2, num_wins, self.n_evals))
+        else:
+            if num_wins < self.n_evals:
+                won_player = 1 if elo_1 > elo_2 else 2
+                num_wins = num_wins if won_player == 2 else self.n_evals - num_wins
+                logging.info('Player {} wins {}/{}'.format(won_player, num_wins, self.n_evals))
+        return elo_2 > old_elo

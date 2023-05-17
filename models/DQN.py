@@ -71,7 +71,7 @@ class DQN(nn.Module):
         self.input_shape = input_shape
         self.output_shape = output_shape
         self.in_channels = input_shape[0]
-        self.elo_history = np.array([1000])
+        self.elo_history = np.array([0])
         
         self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
                                stride=config['conv1-stride'], padding=config['conv1-padding'])

@@ -11,6 +11,7 @@ import time
 from matplotlib import pyplot as plt
 import torch
 from Algorithms.RandomStep import RandomStep
+from src.evaluator import Evaluator
 from models.DQN import DQN
 from src.environment import AgentFighting
 log = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ def argument_parser():
     parser.add_argument('-a', '--algorithm', default='dqn')
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     parser.add_argument('--figure-path', type=str, default='figures/')
+    parser.add_argument('--n-evals', type=int, default=5)
     
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
@@ -42,7 +44,7 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=10)
     parser.add_argument('--model-path-1', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet2.pt')
+    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--load-model', action='store_true', default=True)
     return parser.parse_args()
 
@@ -56,37 +58,13 @@ def main():
     model_1 = DQN(n_observations, n_actions, dueling=True).to(device)
     model_2 = DQN(n_observations, n_actions, dueling=True).to(device)
     
-    dqn_1 = DDQN(   n_observations=n_observations, 
-                    n_actions=n_actions,
-                    model=model_1
-                )
-    dqn_2 = DDQN(   n_observations=n_observations, 
-                    n_actions=n_actions,
-                    model=model_2
-                )
-    
     if args.load_model:
-        dqn_1.load_model(args.model_path_1)
-        dqn_2.load_model(args.model_path_2)
+        model_1.load(args.model_path_1)
+        model_2.load(args.model_path_2)
     
-    for episode in range(args.num_episodes):
-        done = False
-        state = env.get_state()
-        for cnt in count():
-            env.render()
-            if state['player-id'] == 0:
-                valid_actions = env.get_valid_actions()
-                action = dqn_1.get_action(state['observation'], valid_actions, epsilon=0)
-            else:
-                valid_actions = env.get_valid_actions()
-                action = dqn_2.get_action(state['observation'], valid_actions, epsilon=0)
-            next_state, reward, done = env.step(action, verbose=args.verbose)
-            state = next_state
-            if done:
-                break
-        print(env.state.scores)
-        env.reset()
-        print('Episode {} finished after {} timesteps.'.format(episode, cnt))
+    evaluator = Evaluator(env, n_evals=args.n_evals, device=device)
+    
+    evaluator.eval(model_1, model_2, change_elo=False)
                 
     time.sleep(3)
 
