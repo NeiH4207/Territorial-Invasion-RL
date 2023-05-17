@@ -82,4 +82,4 @@ class Evaluator():
             won_player = 1 if num_wins < self.n_evals - num_wins else 2
             num_wins = num_wins if won_player == 2 else self.n_evals - num_wins
             logging.info('Player {} wins {}/{}'.format(won_player, num_wins, self.n_evals))
-        return elo_2 > old_elo
+        return elo_2 > elo_1

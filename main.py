@@ -39,7 +39,7 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=False)
+    parser.add_argument('--load-model', action='store_true', default=True)
     
     return parser.parse_args()
 
@@ -113,7 +113,9 @@ def main():
             old_model.load(args.model_path, device)
             improved = evaluator.eval(old_model, new_model)
             if improved:
-                algorithm.save_model()
+                new_model.save(args.model_path)
+            else:
+                old_model.save(args.model_path)
             plot_elo(new_model.elo_history, args.figure_path)
 
 if __name__ == "__main__":
