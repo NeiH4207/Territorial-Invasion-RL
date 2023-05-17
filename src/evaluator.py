@@ -79,8 +79,7 @@ class Evaluator():
             logging.info('Elo changes from {} to {} | Win {}/{}'.\
                 format(old_elo, elo_2, num_wins, self.n_evals))
         else:
-            if num_wins < self.n_evals:
-                won_player = 1 if elo_1 > elo_2 else 2
-                num_wins = num_wins if won_player == 2 else self.n_evals - num_wins
-                logging.info('Player {} wins {}/{}'.format(won_player, num_wins, self.n_evals))
+            won_player = 1 if num_wins < self.n_evals - num_wins else 2
+            num_wins = num_wins if won_player == 2 else self.n_evals - num_wins
+            logging.info('Player {} wins {}/{}'.format(won_player, num_wins, self.n_evals))
         return elo_2 > old_elo
