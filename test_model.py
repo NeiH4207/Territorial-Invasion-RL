@@ -25,7 +25,7 @@ def argument_parser():
     parser = ArgumentParser()
     parser.add_argument('--show-screen', type=bool, default=False)
     parser.add_argument('-a', '--algorithm', default='dqn')
-    parser.add_argument('-v', '--verbose', action='store_true', default=True)
+    parser.add_argument('-v', '--verbose', action='store_true', default=False)
     parser.add_argument('--figure-path', type=str, default='figures/')
     
     # DDQN arguments
@@ -42,8 +42,8 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=10)
     parser.add_argument('--model-path-1', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=False)
+    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet2.pt')
+    parser.add_argument('--load-model', action='store_true', default=True)
     return parser.parse_args()
 
 def main():
@@ -80,7 +80,7 @@ def main():
             else:
                 valid_actions = env.get_valid_actions()
                 action = dqn_2.get_action(state['observation'], valid_actions, epsilon=0)
-            next_state, reward, done = env.step(action)
+            next_state, reward, done = env.step(action, verbose=args.verbose)
             state = next_state
             if done:
                 break

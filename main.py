@@ -11,10 +11,11 @@ import time
 from matplotlib import pyplot as plt
 import torch
 from Algorithms.RandomStep import RandomStep
+from src.evaluator import Evaluator
 from models.DQN import DQN
 from src.environment import AgentFighting
 from src.utils import plot_history
-log = logging.getLogger(__name__)
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 from argparse import ArgumentParser
 from Algorithms.DDQN import DDQN
 
@@ -24,6 +25,7 @@ def argument_parser():
     parser.add_argument('-a', '--algorithm', default='dqn')
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
+    parser.add_argument('--n-evals', type=int, default=5)
     
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
@@ -33,13 +35,13 @@ def argument_parser():
     parser.add_argument('--epsilon-decay', type=float, default=0.995)
     
     # model training arguments
-    parser.add_argument('--lr', type=float, default=1e-5)
-    parser.add_argument('--batch-size', type=int, default=128)
+    parser.add_argument('--lr', type=float, default=1e-6)
+    parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=False)
+    parser.add_argument('--load-model', action='store_true', default=True)
     
     return parser.parse_args()
 
@@ -52,6 +54,7 @@ def main():
     algorithm = None
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = DQN(n_observations, n_actions, dueling=True).to(device)
+    evaluator = Evaluator(AgentFighting(args, configs, False), n_evals=args.n_evals, device=device)
     
     model_dir = os.path.dirname(args.model_path)
     if not os.path.exists(model_dir):
@@ -82,9 +85,6 @@ def main():
             
     elif args.algorithm == 'pso':
         return
-    
-    elif args.algorithm == 'random':
-        algorithm = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)
         
     else:
         raise ValueError('Algorithm {} is not supported'.format(args.algorithm))
@@ -110,8 +110,12 @@ def main():
             plot_history(history, args.figure_path)
         env.reset()
         algorithm.adaptiveEGreedy()
-        algorithm.save_model(args.model_path)
-        print('Episode {} finished after {} timesteps.'.format(episode, cnt))
+        if (episode + 1) % 20 == 0:
+            old_model = DQN(n_observations, n_actions, dueling=True).to(device)
+            old_model.load(args.model_path, device)
+            improved = evaluator.eval(old_model, algorithm.get_model())
+            if improved:
+                algorithm.save_model()
 
 if __name__ == "__main__":
     main()

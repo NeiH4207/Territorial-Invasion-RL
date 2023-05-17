@@ -8,6 +8,8 @@ from collections import deque
 import torch
 import torch.nn as nn
 from tqdm import tqdm
+import logging
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 class DQN():
     def __init__(self, n_observations=None, n_actions=None, model=None,
@@ -122,5 +124,11 @@ class DQN():
         self.policy_net.load(path)
         self.target_net = deepcopy(self.policy_net)
         
-    def save_model(self, path):
-        self.policy_net.save(path)
+    def save_model(self):
+        if self.model_path is None:
+            logging.error('Model path not specified')
+        self.target_net.save(self.model_path)
+        logging.info('Model saved to {}'.format(self.model_path))
+        
+    def get_model(self):
+        return self.target_net

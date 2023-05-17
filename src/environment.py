@@ -1,10 +1,9 @@
 from copy import deepcopy as dcopy
-import logging
-
 import numpy as np
 from Board.screen import Screen
 from src.player import Player
 from src.state import State
+import logging
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 class AgentFighting(object):
@@ -113,9 +112,9 @@ class AgentFighting(object):
         :return: An integer representing the winner of the game.
         """
         if self.state.scores[0] > self.state.scores[1]:
-            return 'First Player'
+            return 0
         elif self.state.scores[1] > self.state.scores[0]:
-            return 'Second Player'
+            return 1
         else:
             return -1
     

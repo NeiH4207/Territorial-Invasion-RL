@@ -69,7 +69,7 @@ class DQN(nn.Module):
         self.input_shape = input_shape
         self.output_shape = output_shape
         self.in_channels = input_shape[0]
-        self.board_x, self.board_y = input_shape[1], input_shape[2]
+        self.ELO = 1000
         
         self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
                                stride=config['conv1-stride'], padding=config['conv1-padding'])
@@ -89,7 +89,7 @@ class DQN(nn.Module):
                                                     config['resblock-kernel-size']))
         
         
-        self.out_conv1_dim = int((self.board_x - config['conv1-kernel-size'] + 2 * config['conv1-padding']) / config['conv1-stride'] + 1)
+        self.out_conv1_dim = int((self.input_shape[1] - config['conv1-kernel-size'] + 2 * config['conv1-padding']) / config['conv1-stride'] + 1)
         self.out_conv2_dim = int((self.out_conv1_dim - config['conv2-kernel-size'] + 2 * config['conv2-padding']) / config['conv2-stride'] + 1)
         self.out_conv3_dim = int((self.out_conv2_dim - config['conv3-kernel-size'] + 2 * config['conv3-padding']) / config['conv3-stride'] + 1)
         self.flatten_dim = config['conv3-num-filter'] * ((self.out_conv3_dim) ** 2)
@@ -106,6 +106,12 @@ class DQN(nn.Module):
         s = s.view(-1, self.flatten_dim)
         s = self.outblock(s)
         return s
+    
+    def get_elo(self):
+        return self.ELO
+    
+    def set_elo(self, ELO):
+        self.ELO = ELO
     
     def set_loss_function(self, loss):
         if loss == "mse":
@@ -160,13 +166,21 @@ class DQN(nn.Module):
             self.optimizer = optim.AdamW(self.parameters(), lr=lr, amsgrad=True)
     
     def save(self, path=None):
-        torch.save(self.state_dict(), path)
-        print("Model saved at {}".format(path))
+        state_dict = self.state_dict()
+        ELO = self.ELO
+        _dict = {
+            'ELO': ELO,
+            'state_dict': state_dict
+        }
+        torch.save(_dict, path)
         
     def load(self, path=None, device=None):
         if device is None:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if path is None:
             raise ValueError("Path is not defined")
-        self.load_state_dict(torch.load(path, map_location=device))
+        _dict = torch.load(path, map_location=device)
+        ELO = _dict['ELO']
+        self.ELO = ELO
+        self.load_state_dict(_dict['state_dict'])
         print('Model loaded from {}'.format(path))
