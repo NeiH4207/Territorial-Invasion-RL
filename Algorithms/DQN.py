@@ -81,6 +81,7 @@ class DQN():
         else:
             _tqdm = range(len(self.memory) // batch_size + 1)
         total_loss = 0
+        self.policy_net.train()
         
         for i in _tqdm:
             minibatch = random.sample(self.memory, batch_size)

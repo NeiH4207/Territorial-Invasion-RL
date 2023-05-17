@@ -100,6 +100,7 @@ def main():
             action = algorithm.get_action(state, valid_actions)
             next_state, reward, done = env.step(action)
             next_state = next_state['observation']
+            state, action, next_state = env.get_symmetry_transition(state, action, next_state)
             algorithm.memorize(state, action, next_state, reward, done)
             state = next_state
             env.save_image(os.path.join(args.figure_path, 'current_state.png'.format(episode, cnt)))

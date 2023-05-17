@@ -1,4 +1,5 @@
 from copy import deepcopy as dcopy
+import random
 import numpy as np
 from Board.screen import Screen
 from src.player import Player
@@ -17,6 +18,26 @@ class AgentFighting(object):
             'Build': ['U', 'D', 'L', 'R'],
             'Destroy': ['U', 'D', 'L', 'R'],
             'Stay': 1
+        }
+        
+        self.action_map = {
+            ('Move', 'U'): 0,
+            ('Move', 'D'): 1,
+            ('Move', 'L'): 2,
+            ('Move', 'R'): 3,
+            ('Move', 'UL'): 4,
+            ('Move', 'UR'): 5,
+            ('Move', 'DL'): 6,
+            ('Move', 'DR'): 7,
+            ('Build', 'U'): 8,
+            ('Build', 'D'): 9,
+            ('Build', 'L'): 10,
+            ('Build', 'R'): 11,
+            ('Destroy', 'U'): 12,
+            ('Destroy', 'D'): 13,
+            ('Destroy', 'L'): 14,
+            ('Destroy', 'R'): 15,
+            ('Stay', 'Stay'): 16
         }
         
         self.direction_map = {
@@ -181,7 +202,78 @@ class AgentFighting(object):
                 is_valid_action = False
                 
         return is_valid_action
+    
+    def flip(self, matrix):
+        return np.flip(matrix, axis=1)
+    
+    def rotate(self, matrix, k=1):
+        return np.rot90(matrix, k=k)
+
+    def get_symmetry_transition(self, state, action, next_state):
+        flip = random.choice([True, False])
+        action_type = self.get_type_action(action)
+        if action_type[0] == 'Stay':
+            return state, action, next_state
         
+        if flip:
+            direction = action_type[1]
+            if action_type[0] == 'Move' or action_type[0] == 'Build' or action_type[0] == 'Destroy':
+                if direction == 'L':
+                    direction = 'R'
+                elif direction == 'R':
+                    direction = 'L'
+                elif direction == 'UL':
+                    direction = 'UR'
+                elif direction == 'UR':
+                    direction = 'UL'
+                elif direction == 'DL':
+                    direction = 'DR'
+                elif direction == 'DR':
+                    direction = 'DL'
+            
+            action = self.action_map[(action_type[0], direction)]
+                
+            for i in range(state.shape[0]):
+                state_layer = self.flip(state[i])
+                state[i] = state_layer
+                next_state_layer = self.flip(next_state[i])
+                next_state[i] = next_state_layer
+                
+        action_type = self.get_type_action(action)
+        k = random.choice([0, 1, 2, 3])
+        
+        for i in range(state.shape[0]):
+            state_layer = self.rotate(state[i], k=k)
+            state[i] = state_layer
+            next_state_layer = self.rotate(next_state[i], k=k)
+            next_state[i] = next_state_layer
+            
+        if action_type[0] == 'Move' or action_type[0] == 'Build' or action_type[0] == 'Destroy':
+            direction = action_type[1]
+            for i in range(k):
+                if direction == 'L':
+                    direction = 'D'
+                elif direction == 'R':
+                    direction = 'U'
+                elif direction == 'D':
+                    direction = 'R'
+                elif direction == 'U':
+                    direction = 'L'
+                elif direction == 'UL':
+                    direction = 'DL'
+                elif direction == 'DL':
+                    direction = 'DR'
+                elif direction == 'DR':
+                    direction = 'UR'
+                elif direction == 'UR':
+                    direction = 'UL'
+                    
+                action = self.action_map[(action_type[0], direction)]
+                    
+            action = self.action_map[(action_type[0], direction)]
+    
+        return state, action, next_state
+    
     def get_valid_actions(self):
         valids = np.zeros(self.n_actions, dtype=bool)
         
