@@ -6,6 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim as optim
 from models import ModelConfig
+import logging
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 class ResBlock(nn.Module):
     def __init__(self, inplanes=128, planes=128, kernel_size=3, stride=1, downsample=None):
@@ -69,7 +71,7 @@ class DQN(nn.Module):
         self.input_shape = input_shape
         self.output_shape = output_shape
         self.in_channels = input_shape[0]
-        self.ELO = 1000
+        self.elo_history = np.array([1000])
         
         self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
                                stride=config['conv1-stride'], padding=config['conv1-padding'])
@@ -108,10 +110,10 @@ class DQN(nn.Module):
         return s
     
     def get_elo(self):
-        return self.ELO
+        return self.elo_history[-1]
     
     def set_elo(self, ELO):
-        self.ELO = ELO
+        self.elo_history = np.append(self.elo_history, ELO)
     
     def set_loss_function(self, loss):
         if loss == "mse":
@@ -166,13 +168,15 @@ class DQN(nn.Module):
             self.optimizer = optim.AdamW(self.parameters(), lr=lr, amsgrad=True)
     
     def save(self, path=None):
+        if path is None:
+            logging.error('Model path not specified')
         state_dict = self.state_dict()
-        ELO = self.ELO
         _dict = {
-            'ELO': ELO,
+            'elo_history': self.elo_history,
             'state_dict': state_dict
         }
         torch.save(_dict, path)
+        logging.info('Model saved to {}'.format(path))
         
     def load(self, path=None, device=None):
         if device is None:
@@ -180,7 +184,6 @@ class DQN(nn.Module):
         if path is None:
             raise ValueError("Path is not defined")
         _dict = torch.load(path, map_location=device)
-        ELO = _dict['ELO']
-        self.ELO = ELO
+        self.elo_history = _dict['elo_history']
         self.load_state_dict(_dict['state_dict'])
         print('Model loaded from {}'.format(path))

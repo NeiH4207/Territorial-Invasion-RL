@@ -125,10 +125,7 @@ class DQN():
         self.target_net = deepcopy(self.policy_net)
         
     def save_model(self):
-        if self.model_path is None:
-            logging.error('Model path not specified')
         self.target_net.save(self.model_path)
-        logging.info('Model saved to {}'.format(self.model_path))
         
     def get_model(self):
         return self.target_net

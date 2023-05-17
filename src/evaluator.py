@@ -73,5 +73,5 @@ class Evaluator():
         
         old_model.set_elo(elo_1)
         new_model.set_elo(elo_2)
-        logging.info('Elo Changes from {} to {}'.format(old_elo_2, elo_2))
+        logging.info('Elo changes from {} to {}'.format(old_elo_2, elo_2))
         return elo_2 > old_elo_2

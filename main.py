@@ -8,13 +8,11 @@ import json
 import logging
 import os
 import time
-from matplotlib import pyplot as plt
 import torch
-from Algorithms.RandomStep import RandomStep
 from src.evaluator import Evaluator
 from models.DQN import DQN
 from src.environment import AgentFighting
-from src.utils import plot_history
+from src.utils import plot_elo
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 from argparse import ArgumentParser
 from Algorithms.DDQN import DDQN
@@ -41,7 +39,7 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--load-model', action='store_true', default=False)
     
     return parser.parse_args()
 
@@ -82,12 +80,14 @@ def main():
                         )
         if args.load_model:
             algorithm.load_model(args.model_path)
-            
+
     elif args.algorithm == 'pso':
         return
         
     else:
         raise ValueError('Algorithm {} is not supported'.format(args.algorithm))
+    
+    model.save(args.model_path)
     
     for episode in range(args.num_episodes):
         done = False
@@ -103,19 +103,18 @@ def main():
             state = next_state
             env.save_image(os.path.join(args.figure_path, 'current_state.png'.format(episode, cnt)))
             if done:
-                print(env.state.scores)
                 break
-        history = algorithm.replay(args.batch_size, verbose=args.verbose)
-        if history and args.verbose:
-            plot_history(history, args.figure_path)
+        algorithm.replay(args.batch_size, verbose=args.verbose)
         env.reset()
         algorithm.adaptiveEGreedy()
         if (episode + 1) % 20 == 0:
+            new_model = algorithm.get_model()
             old_model = DQN(n_observations, n_actions, dueling=True).to(device)
             old_model.load(args.model_path, device)
-            improved = evaluator.eval(old_model, algorithm.get_model())
+            improved = evaluator.eval(old_model, new_model)
             if improved:
                 algorithm.save_model()
+            plot_elo(new_model.elo_history, args.figure_path)
 
 if __name__ == "__main__":
     main()
