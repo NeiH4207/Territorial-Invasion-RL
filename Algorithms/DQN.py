@@ -33,28 +33,9 @@ class DQN():
             'loss': [],
             'reward': []
         }
-    def flip(self, matrix):
-        return np.flip(matrix, axis=1)
-    
-    def rotate(self, matrix, k=1):
-        return np.rot90(matrix, k=k)
 
     def memorize(self, state, action, next_state, reward, done):
-        flip = random.choice([True, False])
-        if flip:
-            for i in range(state.shape[0]):
-                state_layer = self.flip(state[i])
-                state[i] = state_layer
-                next_state_layer = self.flip(next_state[i])
-                next_state[i] = next_state_layer
-        k = random.choice([0, 1, 2, 3])
-        for i in range(state.shape[0]):
-            state_layer = self.rotate(state[i], k=k)
-            state[i] = state_layer
-            next_state_layer = self.rotate(next_state[i], k=k)
-            next_state[i] = next_state_layer
-                
-        self.memory.append((state, action, next_state, reward, done))
+        self.memory.memorize(state, action, next_state, reward, done)
         
     def get_action(self, state, valid_actions=None, epsilon=None):
         if epsilon is None:

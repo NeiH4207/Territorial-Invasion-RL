@@ -44,7 +44,7 @@ class Evaluator():
         old_elo = elo_2
         num_wins = 0
         
-        for _ in tqdm(range(self.n_evals), desc='Evaluating'):
+        for i in tqdm(range(self.n_evals), desc='Evaluating'):
             done = False
             state = self.env.get_state()
             for cnt in count():
@@ -71,7 +71,8 @@ class Evaluator():
             if winner == 0:
                 num_wins += 1
             elo_1, elo_2 = self.compute_elo(elo_1, elo_2, winner)
-            self.env.reset()
+            if i < self.n_evals - 1:
+                self.env.reset()
         
         if change_elo:
             old_model.set_elo(elo_1)
