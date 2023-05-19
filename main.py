@@ -24,23 +24,23 @@ def argument_parser():
     parser.add_argument('-a', '--algorithm', default='per')
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
-    parser.add_argument('--n-evals', type=int, default=5)
+    parser.add_argument('--n-evals', type=int, default=10)
     
     # DDQN arguments
-    parser.add_argument('--gamma', type=float, default=0.99)
+    parser.add_argument('--gamma', type=float, default=0.985)
     parser.add_argument('--tau', type=int, default=0.005)
-    parser.add_argument('--epsilon', type=float, default=0.9)
+    parser.add_argument('--epsilon', type=float, default=0.4)
     parser.add_argument('--epsilon-min', type=float, default=0.1)
-    parser.add_argument('--epsilon-decay', type=float, default=0.995)
+    parser.add_argument('--epsilon-decay', type=float, default=0.6)
     
     # model training arguments
-    parser.add_argument('--lr', type=float, default=1e-6)
+    parser.add_argument('--lr', type=float, default=1e-7)
     parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=False)
+    parser.add_argument('--load-model', action='store_true', default=True)
     
     return parser.parse_args()
 
@@ -107,6 +107,8 @@ def main():
     
     model.save(args.model_path)
     
+    not_improved_cnt = 0
+    
     for episode in range(args.num_episodes):
         done = False
         state = env.get_state()
@@ -120,22 +122,26 @@ def main():
             state, action, next_state = env.get_symmetry_transition(state, action, next_state)
             algorithm.memorize(state, action, next_state, reward, done)
             state = next_state
-            env.save_image(os.path.join(args.figure_path, 'current_state.png'.format(episode, cnt)))
+            env.save_image(os.path.join(args.figure_path, 'current_state.png'))
             if done:
                 break
         algorithm.replay(args.batch_size, verbose=args.verbose)
         env.reset()
         algorithm.adaptiveEGreedy()
-        if (episode + 1) % 20 == 0:
-            new_model = algorithm.get_model()
+        if (episode + 1) % 50 == 0:
             old_model = DQN(n_observations, n_actions, dueling=True).to(device)
             old_model.load(args.model_path, device)
-            improved = evaluator.eval(old_model, new_model)
+            improved = evaluator.eval(old_model, model)
             if improved:
-                new_model.save(args.model_path)
+                model.save(args.model_path)
             else:
-                old_model.save(args.model_path)
-            plot_elo(new_model.elo_history, args.figure_path)
+                not_improved_cnt += 1
+                if not_improved_cnt == 5:
+                    algorithm.load_model(args.model_path)
+                    not_improved_cnt = 0
+                    logging.info('Model not improved for 5 consecutive evaluations. Reverting to previous model.')
+                    
+            plot_elo(model.elo_history, args.figure_path)
 
 if __name__ == "__main__":
     main()

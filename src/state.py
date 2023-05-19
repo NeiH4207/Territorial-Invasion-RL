@@ -16,16 +16,17 @@ class State(Map):
         self.territory_scores = [0 for _ in range(self.num_players)]
         self.alpha = 1
         self.beta = 10
-        self.gamma = 1
+        self.gamma = 0.5
         self.limit_obs_size = 5
         
     @property
     def scores(self):
         score_A = self.alpha * self.wall_scores[0] + self.beta * self.castle_scores[0] + \
-            (self.open_territory_scores[0] + self.closed_territory_scores[0])
+            self.gamma * (self.open_territory_scores[0] + self.closed_territory_scores[0])
         score_B = self.alpha * self.wall_scores[1] + self.beta * self.castle_scores[1] + \
-            (self.open_territory_scores[1] + self.closed_territory_scores[1])
+            self.gamma * (self.open_territory_scores[1] + self.closed_territory_scores[1])
         return np.array([score_A, score_B])
+    
     
     def set_players(self, players):
         self.players = players
@@ -49,14 +50,14 @@ class State(Map):
 
     def transition_matrix(self, matrix, vector):
         result = []
-        rows, cols = len(matrix), len(matrix[0])
         dx, dy = vector
+        rows, cols = len(matrix), len(matrix[0])
 
         for i in range(rows):
             row = []
             for j in range(cols):
                 new_i, new_j = i - dx, j - dy
-                if 0 <= new_i < rows and 0 <= new_j < cols:
+                if 0 <= new_i < self.height and 0 <= new_j < self.width:
                     row.append(matrix[new_i][new_j])
                 else:
                     row.append(-1)

@@ -125,4 +125,4 @@ class DQN():
         self.target_net.save(self.model_path)
         
     def get_model(self):
-        return self.target_net
+        return self.policy_net
