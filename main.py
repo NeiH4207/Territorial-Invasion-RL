@@ -9,19 +9,20 @@ import logging
 import os
 import time
 import torch
+from Algorithms.Rainbow import Rainbow
 from src.evaluator import Evaluator
 from src.environment import AgentFighting
-from src.utils import plot_elo
+from src.utils import plot_elo, plot_history
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 from argparse import ArgumentParser
-from models.DQN import DQN
+from models.AgentDQN import DQN
 from Algorithms.DDQN import DDQN
 from Algorithms.PER import PER
 
 def argument_parser():
     parser = ArgumentParser()
     parser.add_argument('--show-screen', type=bool, default=False)
-    parser.add_argument('-a', '--algorithm', default='per')
+    parser.add_argument('-a', '--algorithm', default='rainbow')
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
     parser.add_argument('--n-evals', type=int, default=10)
@@ -40,7 +41,7 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--load-model', action='store_true', default=False)
     
     return parser.parse_args()
 
@@ -98,6 +99,22 @@ def main():
                             beta=0.6,
                             prior_eps=1e-6
                         )
+    elif args.algorithm == 'rainbow':
+        algorithm = Rainbow(   n_observations=n_observations, 
+                            n_actions=n_actions,
+                            model=model,
+                            tau=args.tau,
+                            gamma=args.gamma,
+                            epsilon=args.epsilon,
+                            epsilon_min=args.epsilon_min,
+                            epsilon_decay=args.epsilon_decay,
+                            memory_size=args.memory_size,
+                            model_path=args.model_path,
+                            batch_size=args.batch_size,
+                            alpha=0.2,
+                            beta=0.6,
+                            prior_eps=1e-6
+                        )
 
     elif args.algorithm == 'pso':
         return
@@ -125,22 +142,26 @@ def main():
             env.save_image(os.path.join(args.figure_path, 'current_state.png'))
             if done:
                 break
-        algorithm.replay(args.batch_size, verbose=args.verbose)
+        if episode % 3 == 0 and algorithm.fully_mem(0.25):
+            history = algorithm.replay(args.batch_size, verbose=args.verbose)
+            plot_history(history['loss'], args.figure_path)
         env.reset()
-        algorithm.adaptiveEGreedy()
-        if (episode + 1) % 50 == 0:
+        if (episode + 1) % 30 == 0:
             old_model = DQN(n_observations, n_actions, dueling=True).to(device)
             old_model.load(args.model_path, device)
             improved = evaluator.eval(old_model, model)
             if improved:
                 model.save(args.model_path)
+                algorithm.adaptiveEGreedy()
+                not_improved_cnt = 0
             else:
                 not_improved_cnt += 1
-                if not_improved_cnt == 5:
+                if not_improved_cnt == 10:
                     algorithm.load_model(args.model_path)
+                    algorithm.reset_history()
                     not_improved_cnt = 0
                     logging.info('Model not improved for 5 consecutive evaluations. Reverting to previous model.')
-                    
+
             plot_elo(model.elo_history, args.figure_path)
 
 if __name__ == "__main__":

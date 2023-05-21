@@ -19,6 +19,7 @@ class DQN():
         super().__init__()
         self.n_observations = n_observations
         self.n_actions = n_actions
+        self.memory_size = memory_size
         self.memory = deque(maxlen=memory_size)
         self.gamma = gamma
         self.epsilon = epsilon
@@ -33,6 +34,9 @@ class DQN():
             'loss': [],
             'reward': []
         }
+        
+    def fully_mem(self, perc=1.0):
+        return len(self.memory) / (self.memory_size - 1) >= perc
 
     def memorize(self, state, action, next_state, reward, done):
         self.memory.memorize(state, action, next_state, reward, done)
@@ -126,3 +130,6 @@ class DQN():
         
     def get_model(self):
         return self.policy_net
+        
+    def reset_history(self):
+        self.history['loss'] = []

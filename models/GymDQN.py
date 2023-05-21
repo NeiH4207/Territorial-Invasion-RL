@@ -6,17 +6,25 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim as optim
 
+from models.NoisyLayer import NoisyLinear
 
-class GymNet(nn.Module):
 
-    def __init__(self, n_observations, n_actions):
-        super(GymNet, self).__init__()
+class GymDQN(nn.Module):
+
+    def __init__(
+        self, 
+        n_observations: int, 
+        n_actions: int, 
+        optimizer: str = "adamw",
+        lr: float = 0.001) -> None:
+        super(GymDQN, self).__init__()
         self.n_observations = n_observations
         self.n_actions = n_actions
         self.layer1 = nn.Linear(n_observations, 128)
         self.layer2 = nn.Linear(128, 128)
-        self.value = nn.Linear(128, n_actions)
-        self.advance = nn.Linear(128, n_actions)
+        self.value = NoisyLinear(128, n_actions)
+        self.advance = NoisyLinear(128, n_actions)
+        self.set_optimizer(optimizer, lr)
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
@@ -47,10 +55,15 @@ class GymNet(nn.Module):
         else:
             raise ValueError("Loss function not found")
         
-    def predict(self, x):
+    def predict(self, x: torch.Tensor) -> np.ndarray:
         x = x.reshape(-1, self.n_observations)
         output = self.forward(x)
         return output.detach().cpu().numpy()
+    
+    def reset_noise(self):
+        """Reset all noisy layers."""
+        self.advance.reset_noise()
+        self.value.reset_noise()
     
     def set_optimizer(self, optimizer, lr):
         if optimizer == "sgd":

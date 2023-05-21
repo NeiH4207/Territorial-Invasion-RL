@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 import torch
 from Algorithms.RandomStep import RandomStep
 from src.evaluator import Evaluator
-from models.DQN import DQN
+from models.AgentDQN import DQN
 from src.environment import AgentFighting
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
@@ -43,8 +43,8 @@ def argument_parser():
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=10)
-    parser.add_argument('--model-path-1', type=str, default='trained_models/nnet2.pt')
-    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet2.pt')
+    parser.add_argument('--model-path-1', type=str, default='trained_models/nnet.pt')
+    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--load-model', action='store_true', default=True)
     return parser.parse_args()
 
