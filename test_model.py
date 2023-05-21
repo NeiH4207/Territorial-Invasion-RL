@@ -3,20 +3,15 @@ Created on Tue Apr 27 2:19:47 2023
 @author: hien
 """
 from __future__ import division
-from itertools import count
 import json
 import logging
-import os
-import time
 from matplotlib import pyplot as plt
 import torch
-from Algorithms.RandomStep import RandomStep
 from src.evaluator import Evaluator
 from models.AgentDQN import DQN
 from src.environment import AgentFighting
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
-from Algorithms.DDQN import DDQN
 import matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
 
@@ -25,24 +20,10 @@ plt.ion()
 def argument_parser():
     parser = ArgumentParser()
     parser.add_argument('--show-screen', type=bool, default=True)
-    parser.add_argument('-a', '--algorithm', default='dqn')
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     parser.add_argument('--figure-path', type=str, default='figures/')
     parser.add_argument('--n-evals', type=int, default=5)
     
-    # DDQN arguments
-    parser.add_argument('--gamma', type=float, default=0.99)
-    parser.add_argument('--tau', type=int, default=0.005)
-    parser.add_argument('--epsilon', type=float, default=0.9)
-    parser.add_argument('--epsilon-min', type=float, default=0.1)
-    parser.add_argument('--epsilon-decay', type=float, default=0.995)
-    
-    # model training arguments
-    parser.add_argument('--lr', type=float, default=1e-5)
-    parser.add_argument('--batch-size', type=int, default=128)
-    parser.add_argument('--optimizer', type=str, default='adamw')
-    parser.add_argument('--memory-size', type=int, default=32768)
-    parser.add_argument('--num-episodes', type=int, default=10)
     parser.add_argument('--model-path-1', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--model-path-2', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--load-model', action='store_true', default=True)

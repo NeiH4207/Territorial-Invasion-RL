@@ -4,13 +4,9 @@ Created on Tue Apr 27 2:19:47 2023
 """
 from __future__ import division
 from itertools import count
-import json
 import logging
 import os
-import random
 import time
-
-import numpy as np
 import torch
 from Algorithms.Rainbow import Rainbow
 from Algorithms.RandomStep import RandomStep
@@ -26,9 +22,9 @@ import gym
 def argument_parser():
     parser = ArgumentParser()
     # Game options
-    parser.add_argument('--show-screen', type=bool, default=False)
+    parser.add_argument('--show-screen', type=bool, default=True)
     parser.add_argument('-a', '--algorithm', default='rainbow')
-    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
     
     # DDQN arguments
@@ -50,7 +46,10 @@ def argument_parser():
 
 def main():
     args = argument_parser()
-    env = gym.make('CartPole-v1')
+    if args.show_screen:
+        env = gym.make('CartPole-v1', render_mode='human')
+    else:
+        env = gym.make('CartPole-v1')
     n_observations, n_actions = env.observation_space.shape[0], env.action_space.n
     algorithm = None
     set_seed(1)
