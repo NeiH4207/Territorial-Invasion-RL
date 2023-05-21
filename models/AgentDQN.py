@@ -7,6 +7,8 @@ import torch.nn.functional as F
 from torch import optim as optim
 from models import ModelConfig
 import logging
+
+from models.NoisyLayer import NoisyLinear
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 class ResBlock(nn.Module):
@@ -43,8 +45,8 @@ class OutBlock(nn.Module):
         
         self.dueling = dueling
         if self.dueling:
-            self.value = nn.Linear(config['fc2-num-units'], output_shape)
-            self.advance = nn.Linear(config['fc2-num-units'], output_shape)
+            self.value = NoisyLinear(config['fc2-num-units'], output_shape)
+            self.advance = NoisyLinear(config['fc2-num-units'], output_shape)
         else:
             self.Qvalue = nn.Linear(config['fc2-num-units'], output_shape)
     
@@ -191,3 +193,9 @@ class DQN(nn.Module):
         self.load_state_dict(checkpoint['state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         print('Model loaded from {}'.format(path))
+
+    
+    def reset_noise(self):
+        """Reset all noisy layers."""
+        self.outblock.advance.reset_noise()
+        self.outblock.value.reset_noise()

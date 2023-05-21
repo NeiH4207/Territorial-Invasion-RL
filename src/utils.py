@@ -4,12 +4,18 @@
 
 import numbers
 import numpy as np
+import random
 import os
 import torch
 import shutil
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.style.use('ggplot')
+
+def set_seed(seed):
+	torch.manual_seed(seed)
+	np.random.seed(seed)
+	random.seed(seed)
     
 class dotdict(dict):
     def __getattr__(self, name):
@@ -101,11 +107,13 @@ class OrnsteinUhlenbeckActionNoise:
 		self.X = self.X + dx
 		return self.X
 
-def plot_history(history, figure_path):
-    plt.figure(1)
-    plt.xlabel('Episode')
-    plt.ylabel('Loss')
-    plt.title('Training...')
-    plt.plot(history['loss'], 'b')
-    plt.savefig(os.path.join(figure_path, 'loss.png'))
+def plot_history(history, save_dir):
+    fig, ax = plt.subplots()
+    ax.plot(history)
+    ax.set_xlabel('Episodes (x20)')
+    ax.set_ylabel('Loss')
+    ax.set_title('Train Loss')
+    ax.grid(True)
+    save_path = os.path.join(save_dir, 'loss.png')
+    plt.savefig(save_path)
     plt.close()
