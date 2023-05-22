@@ -22,9 +22,9 @@ import gym
 def argument_parser():
     parser = ArgumentParser()
     # Game options
-    parser.add_argument('--show-screen', type=bool, default=True)
+    parser.add_argument('--show-screen', type=bool, default=False)
     parser.add_argument('-a', '--algorithm', default='rainbow')
-    parser.add_argument('-v', '--verbose', action='store_true', default=True)
+    parser.add_argument('-v', '--verbose', action='store_true', default=False)
     parser.add_argument('--figure-path', type=str, default='figures/')
     
     # DDQN arguments
@@ -33,6 +33,7 @@ def argument_parser():
     parser.add_argument('--epsilon', type=float, default=0.9)
     parser.add_argument('--epsilon-min', type=float, default=0.005)
     parser.add_argument('--epsilon-decay', type=float, default=0.95)
+    parser.add_argument('--n-step', type=int, default=3)
     
     # model training arguments
     parser.add_argument('--lr', type=float, default=1e-3)
@@ -180,13 +181,17 @@ def main():
             action = algorithm.get_action(state)
             next_state, reward, done, truncated, _ = env.step(action)
             reward = reward if not done else -1
-            algorithm.memorize(state, action, next_state, reward, done)
+            transition = [state, action, reward, next_state, done]
+            one_step_transition = algorithm.memory_n.store(*transition)
+            if one_step_transition:
+                algorithm.memory.store(*one_step_transition)
+            algorithm.memorize(state, action, reward, next_state, done)
             state = next_state
             if done or truncated:
                 break
         if episode % 3 == 0 and algorithm.fully_mem(0.25):
-            history = algorithm.replay(args.batch_size, verbose=args.verbose)
-            plot_history(history['loss'], args.figure_path)
+            history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
+            plot_history(history_loss, args.figure_path)
             algorithm.adaptiveEGreedy()
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
                 

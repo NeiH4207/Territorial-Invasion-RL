@@ -25,18 +25,19 @@ def argument_parser():
     parser.add_argument('-a', '--algorithm', default='rainbow')
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
-    parser.add_argument('--n-evals', type=int, default=10)
+    parser.add_argument('--n-evals', type=int, default=15)
     
     # DDQN arguments
-    parser.add_argument('--gamma', type=float, default=0.985)
-    parser.add_argument('--tau', type=int, default=0.005)
-    parser.add_argument('--epsilon', type=float, default=0.4)
+    parser.add_argument('--gamma', type=float, default=0.99)
+    parser.add_argument('--tau', type=int, default=0.03)
+    parser.add_argument('--epsilon', type=float, default=0.9)
     parser.add_argument('--epsilon-min', type=float, default=0.1)
-    parser.add_argument('--epsilon-decay', type=float, default=0.6)
+    parser.add_argument('--epsilon-decay', type=float, default=0.99)
+    parser.add_argument('--n-step', type=int, default=5)
     
     # model training arguments
     parser.add_argument('--lr', type=float, default=1e-7)
-    parser.add_argument('--batch-size', type=int, default=256)
+    parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
@@ -113,7 +114,8 @@ def main():
                             batch_size=args.batch_size,
                             alpha=0.2,
                             beta=0.6,
-                            prior_eps=1e-6
+                            prior_eps=1e-6,
+                            n_step=args.n_step
                         )
 
     elif args.algorithm == 'pso':
@@ -132,36 +134,40 @@ def main():
         state = state['observation']
         for cnt in count():
             env.render()
-            valid_actions = env.get_valid_actions()
-            action = algorithm.get_action(state, valid_actions)
+            # valid_actions = env.get_valid_actions()
+            action = algorithm.get_action(state, None)
             next_state, reward, done = env.step(action)
             next_state = next_state['observation']
             state, action, next_state = env.get_symmetry_transition(state, action, next_state)
-            algorithm.memorize(state, action, next_state, reward, done)
+            transition = [state, action, reward, next_state, done]
+            one_step_transition = algorithm.memory_n.store(*transition)
+            if one_step_transition:
+                algorithm.memory.store(*one_step_transition)
+            algorithm.memorize(state, action, reward, next_state, done)
             state = next_state
             env.save_image(os.path.join(args.figure_path, 'current_state.png'))
             if done:
                 break
-        if episode % 3 == 0 and algorithm.fully_mem(0.25):
-            history = algorithm.replay(args.batch_size, verbose=args.verbose)
-            plot_history(history['loss'], args.figure_path)
+        if algorithm.fully_mem(0.75):
+            history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
+            plot_history(history_loss, args.figure_path)
         env.reset()
-        if (episode + 1) % 30 == 0:
+        if (episode + 1) % 50 == 0:
             old_model = DQN(n_observations, n_actions, dueling=True).to(device)
             old_model.load(args.model_path, device)
             improved = evaluator.eval(old_model, model)
-            if improved:
-                model.save(args.model_path)
-                algorithm.adaptiveEGreedy()
-                not_improved_cnt = 0
-            else:
-                not_improved_cnt += 1
-                if not_improved_cnt == 10:
-                    algorithm.load_model(args.model_path)
-                    algorithm.reset_history()
-                    not_improved_cnt = 0
-                    logging.info('Model not improved for 5 consecutive evaluations. Reverting to previous model.')
-
+            # if improved or history_loss[-1] == min(history_loss):
+            model.save(args.model_path)
+            #     algorithm.adaptiveEGreedy()
+            #     not_improved_cnt = 0
+            # else:
+            #     not_improved_cnt += 1
+            #     if not_improved_cnt == 10:
+            #         algorithm.load_model(args.model_path)
+            #         algorithm.reset_history()
+            #         not_improved_cnt = 0
+            #         logging.info('Model not improved for 5 consecutive evaluations. Reverting to previous model.')
+            #         algorithm.reset_memory()
             plot_elo(model.elo_history, args.figure_path)
 
 if __name__ == "__main__":

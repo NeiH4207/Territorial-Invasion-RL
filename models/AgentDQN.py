@@ -74,6 +74,7 @@ class DQN(nn.Module):
         self.output_shape = output_shape
         self.in_channels = input_shape[0]
         self.elo_history = np.array([1000])
+        self.loss_history = np.array([])
         
         self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
                                stride=config['conv1-stride'], padding=config['conv1-padding'])
@@ -118,6 +119,12 @@ class DQN(nn.Module):
     
     def set_elo(self, ELO):
         self.elo_history = np.append(self.elo_history, ELO)
+    
+    def add_loss(self, loss):
+        self.loss_history = np.append(self.loss_history, loss)
+    
+    def get_loss(self):
+        return self.loss_history
     
     def set_loss_function(self, loss):
         if loss == "mse":
@@ -177,6 +184,7 @@ class DQN(nn.Module):
         state_dict = self.state_dict()
         checkpoint = {
             'elo_history': self.elo_history,
+            'loss_history': self.loss_history,
             'state_dict': state_dict,
             'optimizer': self.optimizer.state_dict(),
         }
@@ -190,6 +198,7 @@ class DQN(nn.Module):
             raise ValueError("Path is not defined")
         checkpoint = torch.load(path, map_location=device)
         self.elo_history = checkpoint['elo_history']
+        self.loss_history = checkpoint['loss_history']
         self.load_state_dict(checkpoint['state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         print('Model loaded from {}'.format(path))

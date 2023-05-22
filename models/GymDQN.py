@@ -25,6 +25,7 @@ class GymDQN(nn.Module):
         self.value = NoisyLinear(128, n_actions)
         self.advance = NoisyLinear(128, n_actions)
         self.set_optimizer(optimizer, lr)
+        self.loss_history = np.array([])
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
@@ -36,7 +37,13 @@ class GymDQN(nn.Module):
         mean_adv = torch.mean(adv, dim=1, keepdim=True)
         Q = value + adv - mean_adv
         return Q 
-        
+    
+    def add_loss(self, loss):
+        self.loss_history = np.append(self.loss_history, loss)
+    
+    def get_loss(self):
+        return self.loss_history
+    
     def set_loss_function(self, loss):
         if loss == "mse":
             self.loss = nn.MSELoss()		# Hàm loss là tổng bình phương sai lệch

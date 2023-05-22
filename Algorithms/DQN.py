@@ -37,9 +37,12 @@ class DQN():
         
     def fully_mem(self, perc=1.0):
         return len(self.memory) / (self.memory_size - 1) >= perc
+    
+    def reset_memory(self):
+        self.memory.clear()
 
     def memorize(self, state, action, next_state, reward, done):
-        self.memory.memorize(state, action, next_state, reward, done)
+        self.memory.store(state, action, next_state, reward, done)
         
     def get_action(self, state, valid_actions=None, epsilon=None):
         if epsilon is None:
@@ -76,7 +79,7 @@ class DQN():
             reward_batch = []
             done_batch = []
             
-            for state, action, next_state, reward, done in minibatch:
+            for state, action, reward, next_state, done in minibatch:
                 state_batch.append(torch.Tensor(state).to(self.device))
                 action_batch.append(torch.LongTensor([action]).to(self.device))
                 next_state_batch.append(torch.Tensor(next_state).to(self.device))
