@@ -1,0 +1,13 @@
+{
+    "map":{
+        "height-min": 20,
+        "height-max": 20,
+        "width-min": 20,
+        "width-max": 20,
+        "min-num-agents": 2,
+        "max-num-agents": 5,
+        "min-num-turns": 60,
+        "max-num-turns": 100,
+        "num-castles": 10
+    }
+}
