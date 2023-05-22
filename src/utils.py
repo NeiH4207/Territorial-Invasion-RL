@@ -110,7 +110,7 @@ class OrnsteinUhlenbeckActionNoise:
 def plot_history(history, save_dir):
     fig, ax = plt.subplots()
     ax.plot(history)
-    ax.set_xlabel('Episodes (x20)')
+    ax.set_xlabel('Episodes')
     ax.set_ylabel('Loss')
     ax.set_title('Train Loss')
     ax.grid(True)

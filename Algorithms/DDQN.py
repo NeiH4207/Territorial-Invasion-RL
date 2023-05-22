@@ -1,10 +1,5 @@
-from collections import deque
-from copy import deepcopy
-import numpy as np
 from torch import optim as optim
 import random
-import numpy as np
-from collections import deque
 import torch
 import torch.nn as nn
 from tqdm import tqdm
@@ -39,7 +34,7 @@ class DDQN(DQN):
             reward_batch = []
             done_batch = []
             
-            for state, action, next_state, reward, done in minibatch:
+            for state, action, reward, next_state, done in minibatch:
                 state_batch.append(torch.Tensor(state).to(self.device))
                 action_batch.append(torch.LongTensor([action]).to(self.device))
                 next_state_batch.append(torch.Tensor(next_state).to(self.device))
