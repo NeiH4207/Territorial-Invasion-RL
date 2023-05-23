@@ -53,12 +53,10 @@ class AgentFighting(object):
         
         self.n_actions = len(self.action_list['Move']) + len(self.action_list['Build']) + len(self.action_list['Destroy']) + 1
         self.num_players = 2
-        if self.args.show_screen:
-            self.screen = Screen(self)
+        self.screen = Screen(self)
         self.players = [Player(i, self.num_players) for i in range(self.num_players)]
         self.current_player = 0
         self.reset()
-        self.num_agents = self.state.num_agents
         
     def render(self):
         if self.show_screen:
@@ -79,8 +77,7 @@ class AgentFighting(object):
         self.state.set_players(self.players)
         self.num_agents = self.state.num_agents
         self.state.make_random_map()
-        if self.show_screen:
-            self.screen.init(self.state)
+        self.screen.init(self.state)
         self.num_agents = self.state.num_agents
         return self.state.get_state()
     
@@ -113,10 +110,10 @@ class AgentFighting(object):
 
     
     def get_space_size(self):
-        return self.state.get_state()['observation'].shape
+        return self.get_state().shape
             
     def get_state(self):
-        return dcopy(self.state.get_state())
+        return self.screen.get_numpy_img().transpose(2, 0, 1)
     
     def game_ended(self):
         """
@@ -340,6 +337,7 @@ class AgentFighting(object):
         
         if self.show_screen:
             self.screen.show_score()
+            self.screen.get_numpy_img()
             self.screen.render()
         
         if is_valid_action:

@@ -131,13 +131,11 @@ def main():
     for episode in range(args.num_episodes):
         done = False
         state = env.get_state()
-        state = state['observation']
         for cnt in count():
             env.render()
             # valid_actions = env.get_valid_actions()
             action = algorithm.get_action(state, None)
             next_state, reward, done = env.step(action)
-            next_state = next_state['observation']
             state, action, next_state = env.get_symmetry_transition(state, action, next_state)
             transition = [state, action, reward, next_state, done]
             one_step_transition = algorithm.memory_n.store(*transition)

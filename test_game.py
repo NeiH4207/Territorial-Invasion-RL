@@ -14,7 +14,7 @@ from argparse import ArgumentParser
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=False)
+    parser.add_argument('--show-screen', type=bool, default=True)
     parser.add_argument('--render', type=bool, default=True)
     return parser.parse_args()
 

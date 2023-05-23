@@ -1,4 +1,5 @@
 # MODULES
+import cv2
 import pygame
 import os 
 
@@ -12,8 +13,8 @@ class Screen():
     def __init__(self, render=True):
         if render:
             pygame.init()
-            self.WIDTH = 800
-            self.HEIGHT = 800
+            self.WIDTH = 500
+            self.HEIGHT = 500
             self.LINE_WIDTH = 1
             self.SQUARE_SIZE = int(self.HEIGHT / 20)
             self.color_A = (255, 172,  88)
@@ -37,14 +38,31 @@ class Screen():
         
     def save(self, path):
         pygame.image.save(self.screen, path)
+        
+    def get_numpy_img(self):
+        cur_player = self.state.get_curr_player()
+        x, y = self.state.get_curr_agent()
+        self.display_state_with_player_id(cur_player)
+        self.screen.blit(self.cur_agent_img, self.coord(x, y))
+        numpy_img = pygame.surfarray.array3d(pygame.display.get_surface()) 
+        crop_size = min(numpy_img.shape[0], numpy_img.shape[1])
+        numpy_img = numpy_img[:crop_size,:crop_size,:]
+        numpy_img = cv2.transpose(numpy_img)
+        numpy_img = cv2.cvtColor(numpy_img, cv2.COLOR_RGB2BGR)
+        numpy_img = cv2.resize(numpy_img, (256, 256))
+        # cv2.imwrite('figures/test.png', numpy_img)
+        self.display_state_with_player_id(0)
+        return numpy_img
 
     def load_image(self):
         self.agent_A_img = pygame.transform.scale(
-            pygame.image.load(self.dir_path + '/images/pacman_blue.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
+            pygame.image.load(self.dir_path + '/images/green_piece.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
+        self.cur_agent_img = pygame.transform.scale(
+            pygame.image.load(self.dir_path + '/images/cur_piece.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
         self.agent_B_img = pygame.transform.scale(
-            pygame.image.load(self.dir_path + '/images/pacman_red.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
+            pygame.image.load(self.dir_path + '/images/red_piece.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
         self.wall_A_img =  pygame.transform.scale(
-            pygame.image.load(self.dir_path + '/images/wall_blue.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
+            pygame.image.load(self.dir_path + '/images/wall_green.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
         self.wall_B_img =  pygame.transform.scale(
             pygame.image.load(self.dir_path + '/images/wall_red.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
         self.background_img = pygame.transform.scale(
@@ -80,6 +98,38 @@ class Screen():
                     
         self.show_score()
         
+    def display_state_with_player_id(self, player_id):
+        
+        for i in range(self.height):
+            for j in range(self.width):
+                # draw wall
+                if self.state.walls[player_id, i, j] == 1:
+                    self.draw_wall(0, i, j)
+                    continue
+                elif self.state.walls[player_id^1, i, j] == 1:
+                    self.draw_wall(1, i, j)
+                    continue
+                    
+                if self.state.castles[i, j] == 1:
+                    self.draw_castle(i, j)
+                    continue
+                
+                if self.state.agents[player_id, i, j] == 1:
+                    self.draw_agent(i, j, player_id)
+                    continue
+                elif self.state.agents[player_id^1, i, j] == 1:
+                    self.draw_agent(i, j, player_id^1)
+                    continue
+                
+                self.make_empty_square([i, j])
+                
+                if self.state.territories[player_id, i, j] == 1:
+                    self.draw_squares((i, j), player_id)
+                    continue
+                elif self.state.territories[player_id^1, i, j] == 1:
+                    self.draw_squares((i, j), player_id^1)
+                    continue
+        
     def coord(self, x, y):
         return x * self.SQUARE_SIZE, y * self.SQUARE_SIZE
     
@@ -90,14 +140,14 @@ class Screen():
         pygame.draw.line(self.screen, LINE_COLOR, self.coord(0, self.width), 
                               self.coord(self.height, self.width),
                               self.LINE_WIDTH )
-        myFont = pygame.font.SysFont("Helvetica", 30)
+        myFont = pygame.font.SysFont("Helvetica", 20)
         
         color = LINE_COLOR
         
         SA = myFont.render("Score: " + str(round(self.state.scores[0])), 0, color)
         SB = myFont.render("Score: " + str(round(self.state.scores[1])), 0, color)
         
-        myFont = pygame.font.SysFont("Helvetica", 30)
+        myFont = pygame.font.SysFont("Helvetica", 20)
         STurns = myFont.render("Steps left: " + str(self.state.remaining_turns), 0, color)
         
         text_1_coord = self.coord(1, self.width)

@@ -19,6 +19,13 @@ class State(Map):
         self.gamma = 0.5
         self.limit_obs_size = 5
         
+    def get_curr_player(self):
+        return self.current_player
+    
+    def get_curr_agent(self):
+        curr_player = self.current_player
+        return self.agent_coords_in_order[curr_player][self.agent_current_idx]
+        
     @property
     def scores(self):
         score_A = self.alpha * self.wall_scores[0] + self.beta * self.castle_scores[0] + \
