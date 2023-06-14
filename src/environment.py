@@ -110,10 +110,16 @@ class AgentFighting(object):
 
     
     def get_space_size(self):
-        return self.get_state().shape
+        return self.get_state()['observation'].shape
             
     def get_state(self):
-        return self.screen.get_numpy_img().transpose(2, 0, 1)
+        numpy_img = self.screen.get_numpy_img()
+        # numpy_img = cv2.resize(numpy_img, (256, 256))
+        return {
+            'player-id': self.state.current_player,
+            'observation': numpy_img.transpose(2, 0, 1)
+        }
+        
     
     def game_ended(self):
         """

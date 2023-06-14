@@ -56,7 +56,7 @@ class DQN(nn.Module):
         self.elo_history = np.array([1000])
         self.loss_history = np.array([])
         
-        self.resnet = models.resnet34(pretrained=True)
+        self.resnet = models.resnet18(pretrained=False)
         self.flatten_dim = 1000
         self.outblock = OutBlock(config, self.flatten_dim, output_shape, dueling=dueling)
         
