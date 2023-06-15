@@ -27,40 +27,27 @@ class DDQN(DQN):
         self.policy_net.train()
         
         for i in _tqdm:
-            minibatch = random.sample(self.memory, batch_size)
-            state_batch = []
-            action_batch = []
-            next_state_batch = []
-            reward_batch = []
-            done_batch = []
-            
-            for state, action, reward, next_state, done in minibatch:
-                state_batch.append(torch.Tensor(state).to(self.device))
-                action_batch.append(torch.LongTensor([action]).to(self.device))
-                next_state_batch.append(torch.Tensor(next_state).to(self.device))
-                reward_batch.append(torch.Tensor([reward]).to(self.device))
-                done_batch.append(torch.Tensor([done]).to(self.device))
+            minibatch = self.memory.sample(batch_size)
+            state_batch = torch.Tensor(minibatch[0]).to(self.device) 
+            action_batch = torch.LongTensor(minibatch[1]).to(self.device)
+            reward_batch = torch.Tensor(minibatch[2]).to(self.device)
+            next_state_batch =  torch.Tensor(minibatch[3]).to(self.device)
+            done_batch = torch.Tensor(minibatch[4]).to(self.device)
                 
             
             next_state_values = torch.zeros(batch_size, device=self.device)
             with torch.no_grad():
-                next_action_batch = self.policy_net(torch.stack(next_state_batch, axis=0)).max(1)[1]
-                next_state_values = self.target_net(torch.stack(next_state_batch, axis=0))
+                next_action_batch = self.policy_net(next_state_batch).max(1)[1]
+                next_state_values = self.target_net(next_state_batch)
                 next_state_values = next_state_values.gather(1, next_action_batch.reshape(-1, 1)).squeeze()
-                
-                
-            state_batch = torch.stack(state_batch, axis=0)
-            action_batch = torch.cat(action_batch)
-            reward_batch = torch.cat(reward_batch)
-            done_batch = torch.cat(done_batch)
             
-            expected_state_action_values = (1 - done_batch) * (next_state_values * self.gamma) + reward_batch
+            expected_state_action_values = (1 - done_batch) * (next_state_values.unsqueeze(1) * self.gamma) + reward_batch
 
             state_action_values = self.policy_net(state_batch).gather(1, action_batch.reshape(-1, 1))
             
             # Compute Huber loss
             criterion = nn.SmoothL1Loss()
-            loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
+            loss = criterion(state_action_values, expected_state_action_values)
                 # Optimize the model
             self.policy_net.optimizer.zero_grad()
             loss.backward()
@@ -75,5 +62,7 @@ class DDQN(DQN):
             self.target_net.load_state_dict(target_net_state_dict)
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
+            
         self.history['loss'].append(mean_loss)
+        return self.history['loss']
         

@@ -102,4 +102,6 @@ class PER(DQN):
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
         self.history['loss'].append(mean_loss)
+    
+        return self.history['loss']
         

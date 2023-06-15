@@ -16,20 +16,19 @@ from argparse import ArgumentParser
 from Algorithms.DQN import DQN
 from Algorithms.DDQN import DDQN
 from Algorithms.PER import PER
-from models.GymDQN import GymDQN
+from models.GYM.GymDQN import GymDQN
 import gym
 
 def argument_parser():
     parser = ArgumentParser()
     # Game options
     parser.add_argument('--show-screen', type=bool, default=False)
-    parser.add_argument('-a', '--algorithm', default='rainbow')
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     parser.add_argument('--figure-path', type=str, default='figures/')
     
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
-    parser.add_argument('--tau', type=int, default=0.03)
+    parser.add_argument('--tau', type=int, default=0.01)
     parser.add_argument('--epsilon', type=float, default=0.9)
     parser.add_argument('--epsilon-min', type=float, default=0.005)
     parser.add_argument('--epsilon-decay', type=float, default=0.95)
@@ -56,90 +55,15 @@ def main():
     set_seed(1)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    if args.algorithm == 'dqn':
         
-        model = GymDQN(
-            n_observations=n_observations,
-            n_actions=n_actions,
-            optimizer=args.optimizer,
-            lr=args.lr,
-        ).to(device)
-        
-        algorithm = DQN(   n_observations=n_observations, 
-                            n_actions=n_actions,
-                            model=model,
-                            tau=args.tau,
-                            gamma=args.gamma,
-                            epsilon=args.epsilon,
-                            epsilon_min=args.epsilon_min,
-                            epsilon_decay=args.epsilon_decay,
-                            memory_size=args.memory_size,
-                            model_path=args.model_path
-                        )
-        
-    if args.algorithm == 'ddqn':
-        
-        model = GymDQN(
-            n_observations=n_observations,
-            n_actions=n_actions,
-            use_dueling=False,
-            use_noise=False,
-            optimizer=args.optimizer,
-            lr=args.lr,
-        ).to(device)
-        
-        algorithm = DDQN(   n_observations=n_observations, 
-                            n_actions=n_actions,
-                            model=model,
-                            optimizer=args.optimizer,
-                            lr=args.lr,
-                            tau=args.tau,
-                            gamma=args.gamma,
-                            epsilon=args.epsilon,
-                            epsilon_min=args.epsilon_min,
-                            epsilon_decay=args.epsilon_decay,
-                            memory_size=args.memory_size,
-                            model_path=args.model_path
-                        )
-        
-    elif args.algorithm == 'per':
-        
-        model = GymDQN(
-            n_observations=n_observations,
-            n_actions=n_actions,
-            use_dueling=True,
-            use_noise=False,
-            optimizer=args.optimizer,
-            lr=args.lr,
-        ).to(device)
-        
-        algorithm = PER(   n_observations=n_observations, 
-                            n_actions=n_actions,
-                            model=model,
-                            tau=args.tau,
-                            gamma=args.gamma,
-                            epsilon=args.epsilon,
-                            epsilon_min=args.epsilon_min,
-                            epsilon_decay=args.epsilon_decay,
-                            memory_size=args.memory_size,
-                            model_path=args.model_path,
-                            batch_size=args.batch_size,
-                            alpha=0.2,
-                            beta=0.6,
-                            prior_eps=1e-6
-                        )
-        
-    elif args.algorithm == 'rainbow':
-        
-        model = GymDQN(
-            n_observations=n_observations,
-            n_actions=n_actions,
-            optimizer=args.optimizer,
-            lr=args.lr,
-        ).to(device)
-        
-        algorithm = Rainbow(   
-                        n_observations=n_observations, 
+    model = GymDQN(
+        n_observations=n_observations,
+        n_actions=n_actions,
+        optimizer=args.optimizer,
+        lr=args.lr,
+    ).to(device)
+    
+    algorithm = PER(   n_observations=n_observations, 
                         n_actions=n_actions,
                         model=model,
                         tau=args.tau,
@@ -154,12 +78,7 @@ def main():
                         beta=0.6,
                         prior_eps=1e-6
                     )
-    
-    elif args.algorithm == 'random':
-        algorithm = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)
-    else:
-        raise ValueError('Algorithm {} is not supported'.format(args.algorithm))
-
+        
     if args.model_path:
         model_dir = os.path.dirname(args.model_path)
         if not os.path.exists(model_dir):
@@ -177,14 +96,11 @@ def main():
             action = algorithm.get_action(state)
             next_state, reward, done, truncated, _ = env.step(action)
             reward = reward if not done else -1
-            transition = [state, action, reward, next_state, done]
-            one_step_transition = algorithm.memory_n.store(*transition)
-            if one_step_transition:
-                algorithm.memory.store(*one_step_transition)
             algorithm.memorize(state, action, reward, next_state, done)
             state = next_state
             if done or truncated:
                 break
+            
         if episode % 3 == 0 and algorithm.fully_mem(0.25):
             history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
             plot_history(history_loss, args.figure_path)

@@ -49,13 +49,13 @@ class Rainbow(DQN):
                 n_observations, memory_size, batch_size, n_step=n_step, gamma=gamma
             )
         
-    def get_action(self, state, valid_actions=None, epsilon=None):
-        state = torch.FloatTensor(np.array(state)).to(self.device)
-        act_values = self.policy_net.predict(state)[0]
-        # set value of invalid actions to -inf
-        if valid_actions is not None:
-            act_values[~valid_actions] = -float('inf')
-        return int(np.argmax(act_values))  # returns action
+    # def get_action(self, state, valid_actions=None):
+    #     state = torch.FloatTensor(np.array(state)).to(self.device)
+    #     act_values = self.policy_net.predict(state)[0]
+    #     # set value of invalid actions to -inf
+    #     if valid_actions is not None:
+    #         act_values[~valid_actions] = -float('inf')
+    #     return int(np.argmax(act_values))  # returns action
     
     def reset_memory(self):        
         self.memory.size = 0

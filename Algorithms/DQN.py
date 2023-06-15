@@ -11,6 +11,40 @@ from tqdm import tqdm
 import logging
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
+class Memory(object):
+    def __init__(self, memory_size):
+        self.memory_size = memory_size
+        self.memory = deque(maxlen=memory_size)
+        
+    def __len__(self):
+        return len(self.memory)
+        
+    def store(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
+        
+    def sample(self, batch_size):
+        batch = random.sample(self.memory, batch_size)
+        state_batch = []
+        action_batch = []
+        next_state_batch = []
+        reward_batch = []
+        done_batch = []
+        
+        for state, action, reward, next_state, done in batch:
+            state_batch.append(state)
+            action_batch.append([action])
+            reward_batch.append([reward])
+            next_state_batch.append(next_state)
+            done_batch.append([done])
+        
+        state_batch = np.array(state_batch)
+        action_batch = np.array(action_batch)
+        reward_batch = np.array(reward_batch)
+        next_state_batch = np.array(next_state_batch)
+        done_batch = np.array(done_batch)
+           
+        return state_batch, action_batch, reward_batch, next_state_batch, done_batch
+
 class DQN():
     def __init__(self, n_observations=None, n_actions=None, model=None,
                     tau=0.005, gamma=0.99, epsilon=0.9, epsilon_min=0.05, 
@@ -20,7 +54,7 @@ class DQN():
         self.n_observations = n_observations
         self.n_actions = n_actions
         self.memory_size = memory_size
-        self.memory = deque(maxlen=memory_size)
+        self.memory = Memory(memory_size)
         self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_min = epsilon_min
@@ -41,8 +75,8 @@ class DQN():
     def reset_memory(self):
         self.memory.clear()
 
-    def memorize(self, state, action, next_state, reward, done):
-        self.memory.store(state, action, next_state, reward, done)
+    def memorize(self, state, action, reward, next_state, done):
+        self.memory.store(state, action, reward, next_state, done)
         
     def get_action(self, state, valid_actions=None, epsilon=None):
         if epsilon is None:
@@ -72,38 +106,26 @@ class DQN():
         self.policy_net.train()
         
         for i in _tqdm:
-            minibatch = random.sample(self.memory, batch_size)
-            state_batch = []
-            action_batch = []
-            next_state_batch = []
-            reward_batch = []
-            done_batch = []
-            
-            for state, action, reward, next_state, done in minibatch:
-                state_batch.append(torch.Tensor(state).to(self.device))
-                action_batch.append(torch.LongTensor([action]).to(self.device))
-                next_state_batch.append(torch.Tensor(next_state).to(self.device))
-                reward_batch.append(torch.Tensor([reward]).to(self.device))
-                done_batch.append(torch.Tensor([done]).to(self.device))
+            minibatch = self.memory.sample(batch_size)
+            state_batch = torch.Tensor(minibatch[0]).to(self.device) 
+            action_batch = torch.LongTensor(minibatch[1]).to(self.device)
+            reward_batch = torch.Tensor(minibatch[2]).to(self.device)
+            next_state_batch =  torch.Tensor(minibatch[3]).to(self.device)
+            done_batch = torch.Tensor(minibatch[4]).to(self.device)
                 
             
             next_state_values = torch.zeros(batch_size, device=self.device)
             with torch.no_grad():
-                next_state_values = self.target_net(torch.stack(next_state_batch, axis=0)).max(1)[0]
-                
-            state_batch = torch.stack(state_batch, axis=0)
-            action_batch = torch.cat(action_batch)
-            reward_batch = torch.cat(reward_batch)
-            done_batch = torch.cat(done_batch)
+                next_state_values = self.target_net(next_state_batch).max(1)[0]
             
-            expected_state_action_values = (1 - done_batch) * (next_state_values * self.gamma) + reward_batch
+            expected_state_action_values = (1 - done_batch) * (next_state_values.unsqueeze(1) * self.gamma) + reward_batch
 
             state_action_values = self.policy_net(state_batch).gather(1, action_batch.reshape(-1, 1))
             
             # Compute Huber loss
             criterion = nn.SmoothL1Loss()
-            loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
-                # Optimize the model
+            loss = criterion(state_action_values, expected_state_action_values)
+            # Optimize the model
             self.policy_net.optimizer.zero_grad()
             loss.backward()
             # In-place gradient clipping
@@ -118,7 +140,7 @@ class DQN():
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
         self.history['loss'].append(mean_loss)
-        return self.history
+        return self.history['loss']
         
     def adaptiveEGreedy(self):
         if self.epsilon > self.epsilon_min:
