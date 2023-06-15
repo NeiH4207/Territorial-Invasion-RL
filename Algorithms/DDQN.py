@@ -1,3 +1,4 @@
+import numpy as np
 from torch import optim as optim
 import random
 import torch
@@ -14,6 +15,14 @@ class DDQN(DQN):
         super().__init__(n_observations, n_actions, model, tau, 
                          gamma, epsilon, epsilon_min, epsilon_decay,
                          memory_size, model_path)
+        
+    def get_action(self, state, valid_actions=None):
+        state = torch.FloatTensor(np.array(state)).to(self.device)
+        act_values = self.policy_net.predict(state)[0]
+        # set value of invalid actions to -inf
+        if valid_actions is not None:
+            act_values[~valid_actions] = -float('inf')
+        return int(np.argmax(act_values))  # returns action
         
     def replay(self, batch_size, verbose=False):
 
@@ -54,15 +63,16 @@ class DDQN(DQN):
             # In-place gradient clipping
             torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
             self.policy_net.optimizer.step()
-        
-            target_net_state_dict = self.target_net.state_dict()
-            policy_net_state_dict = self.policy_net.state_dict()
-            for key in policy_net_state_dict:
-                target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
-            self.target_net.load_state_dict(target_net_state_dict)
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
             
-        self.history['loss'].append(mean_loss)
-        return self.history['loss']
-        
+        target_net_state_dict = self.target_net.state_dict()
+        policy_net_state_dict = self.policy_net.state_dict()
+        for key in policy_net_state_dict:
+            target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
+        self.target_net.load_state_dict(target_net_state_dict)
+
+        self.policy_net.add_loss(mean_loss)
+        self.policy_net.reset_noise()
+        self.target_net.reset_noise()
+        return self.policy_net.get_loss()

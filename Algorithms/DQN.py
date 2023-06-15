@@ -78,15 +78,7 @@ class DQN():
     def memorize(self, state, action, reward, next_state, done):
         self.memory.store(state, action, reward, next_state, done)
         
-    def get_action(self, state, valid_actions=None, epsilon=None):
-        if epsilon is None:
-            epsilon = self.epsilon
-        if np.random.rand() <= epsilon:
-            if valid_actions is None:
-                return random.randrange(self.n_actions)
-            else:
-                valid_action_list = [i for i in range(self.n_actions) if valid_actions[i]]
-                return random.choice(valid_action_list)
+    def get_action(self, state, valid_actions=None):
         state = torch.FloatTensor(np.array(state)).to(self.device)
         act_values = self.policy_net.predict(state)[0]
         # set value of invalid actions to -inf
@@ -139,8 +131,11 @@ class DQN():
             self.target_net.load_state_dict(target_net_state_dict)
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
-        self.history['loss'].append(mean_loss)
-        return self.history['loss']
+            
+        self.policy_net.add_loss(mean_loss)
+        self.policy_net.reset_noise()
+        self.target_net.reset_noise()
+        return self.policy_net.get_loss()
         
     def adaptiveEGreedy(self):
         if self.epsilon > self.epsilon_min:
