@@ -5,9 +5,11 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
+from src.environment import AgentFighting
+
 
 class Evaluator():
-    def __init__(self, env, n_evals=10, device=None):
+    def __init__(self, env: AgentFighting, n_evals=10, device=None):
         self.env = env
         self.n_evals = n_evals
         if device is None:
@@ -50,20 +52,20 @@ class Evaluator():
             for cnt in count():
                 if state['player-id'] == 0:
                     valid_actions = self.env.get_valid_actions()
-                    torch_state = torch.FloatTensor(np.array(state['observation'])).to(self.device)
+                    torch_state = torch.FloatTensor(state['observation']).to(self.device)
                     act_values = new_model.predict(torch_state)[0]
                     if valid_actions is not None:
                         act_values[~valid_actions] = -float('inf')
                     action = int(np.argmax(act_values))
                 else:
                     valid_actions = self.env.get_valid_actions()
-                    torch_state = torch.FloatTensor(np.array(state['observation'])).to(self.device)
+                    torch_state = torch.FloatTensor(state['observation']).to(self.device)
                     act_values = old_model.predict(torch_state)[0]
                     if valid_actions is not None:
                         act_values[~valid_actions] = -float('inf')
                     action = int(np.argmax(act_values))
                     
-                next_state, reward, done = self.env.step(action)
+                next_state, _, done = self.env.step(action)
                 state = next_state
                 if done:
                     break
@@ -83,4 +85,4 @@ class Evaluator():
             won_player = 1 if num_wins <= self.n_evals - num_wins else 2
             num_wins = num_wins if won_player == 2 else self.n_evals - num_wins
             logging.info('Player {} wins {}/{}'.format(won_player, num_wins, self.n_evals))
-        return num_wins > self.n_evals - num_wins
+        return num_wins / self.n_evals >= 0.55

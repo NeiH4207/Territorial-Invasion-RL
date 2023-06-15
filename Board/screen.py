@@ -40,17 +40,18 @@ class Screen():
         pygame.image.save(self.screen, path)
         
     def get_numpy_img(self):
-        cur_player = self.state.get_curr_player()
         x, y = self.state.get_curr_agent()
-        self.display_state_with_player_id(cur_player)
+        self.screen.fill( BG_COLOR )
+        self.display_state_with_player_id(0)
         self.screen.blit(self.cur_agent_img, self.coord(x, y))
         numpy_img = pygame.surfarray.array3d(pygame.display.get_surface()) 
         crop_size = min(numpy_img.shape[0], numpy_img.shape[1])
         numpy_img = numpy_img[:crop_size,:crop_size,:]
         numpy_img = cv2.transpose(numpy_img)
         numpy_img = cv2.cvtColor(numpy_img, cv2.COLOR_RGB2BGR)
-        numpy_img = cv2.resize(numpy_img, (256, 256))
-        # cv2.imwrite('figures/test.png', numpy_img)
+        numpy_img = cv2.resize(numpy_img, (172, 172))
+        cv2.imwrite('figures/test.png', numpy_img)
+        self.draw_lines()
         self.display_state_with_player_id(0)
         return numpy_img
 

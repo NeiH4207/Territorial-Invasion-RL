@@ -7,11 +7,31 @@ import torch.nn.functional as F
 from torch import optim as optim
 from models import ModelConfig
 import logging
-from torchvision import models
 
 from models.NoisyLayer import NoisyLinear
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
+class ResBlock(nn.Module):
+    def __init__(self, inplanes=128, planes=128, kernel_size=3, stride=1, downsample=None):
+        super(ResBlock, self).__init__()
+        self.device = 'cuda' if T.cuda.is_available() else 'cpu'
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=kernel_size, stride=stride,
+                     padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=kernel_size, stride=stride,
+                     padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+    def forward(self, x):
+        residual = x
+        out = self.conv1(x)
+        out = F.relu(self.bn1(out))
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out += residual
+        out = F.relu(out)
+        return out
+    
 class OutBlock(nn.Module):
     def __init__(self, config, input_shape, output_shape, dueling=True):
         super(OutBlock, self).__init__()
@@ -56,14 +76,40 @@ class DQN(nn.Module):
         self.elo_history = np.array([1000])
         self.loss_history = np.array([])
         
-        self.resnet = models.resnet34(pretrained=True)
-        self.flatten_dim = 1000
+        self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
+                               stride=config['conv1-stride'], padding=config['conv1-padding'])
+        
+        self.conv2 = nn.Conv2d(config['conv1-num-filter'], config['conv2-num-filter'], kernel_size=config['conv2-kernel-size'],
+                                 stride=config['conv2-stride'], padding=config['conv2-padding'])
+        self.conv3 = nn.Conv2d(config['conv2-num-filter'], config['conv3-num-filter'], kernel_size=config['conv3-kernel-size'],
+                                    stride=config['conv3-stride'], padding=config['conv3-padding'])
+        
+        self.bn1 = nn.BatchNorm2d(config['conv1-num-filter'])
+        self.bn2 = nn.BatchNorm2d(config['conv2-num-filter'])
+        self.bn3 = nn.BatchNorm2d(config['conv3-num-filter'])
+        
+        for block in range(config['num-resblocks']):
+            setattr(self, "res_%i" % block,ResBlock(config['conv3-num-filter'],
+                                                    config['conv3-num-filter'],
+                                                    config['resblock-kernel-size']))
+        
+        
+        self.out_conv1_dim = int((self.input_shape[1] - config['conv1-kernel-size'] + 2 * config['conv1-padding']) / config['conv1-stride'] + 1)
+        self.out_conv2_dim = int((self.out_conv1_dim - config['conv2-kernel-size'] + 2 * config['conv2-padding']) / config['conv2-stride'] + 1)
+        self.out_conv3_dim = int((self.out_conv2_dim - config['conv3-kernel-size'] + 2 * config['conv3-padding']) / config['conv3-stride'] + 1)
+        self.flatten_dim = config['conv3-num-filter'] * ((self.out_conv3_dim) ** 2)
         self.outblock = OutBlock(config, self.flatten_dim, output_shape, dueling=dueling)
         
         self.set_optimizer(optimizer, lr)
     
     def forward(self, s):
-        s = self.resnet(s)
+        s = F.dropout(F.relu(self.bn1(self.conv1(s))), p=0.3, training=self.training)
+        s = F.dropout(F.relu(self.bn2(self.conv2(s))), p=0.3, training=self.training)
+        s = F.dropout(F.relu(self.bn3(self.conv3(s))), p=0.3, training=self.training)
+        
+        for block in range(self.config['num-resblocks']):
+            s = getattr(self, "res_%i" % block)(s)
+            
         s = s.view(-1, self.flatten_dim)
         s = self.outblock(s)
         return s

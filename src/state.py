@@ -87,12 +87,12 @@ class State(Map):
         obs = np.stack(
             (
                 agent_board[0], 
-                agent_board[1],
-                castle_board,
                 wall_board[0], 
-                wall_board[1],
                 territory_board[0], 
-                territory_board[1]
+                agent_board[1],
+                wall_board[1],
+                territory_board[1],
+                castle_board
             ),
             axis=0
         )
@@ -111,7 +111,7 @@ class State(Map):
         return {
             'player-id': self.current_player,
             'observation': obs, 
-            'curr_agent_xy': current_agent_coord
+            'curr_agent_xy': dcopy(current_agent_coord)
             }
 
     def get_scores(self, player):

@@ -61,8 +61,6 @@ def main():
         model = GymDQN(
             n_observations=n_observations,
             n_actions=n_actions,
-            use_dueling=False,
-            use_noise=False,
             optimizer=args.optimizer,
             lr=args.lr,
         ).to(device)
@@ -70,8 +68,6 @@ def main():
         algorithm = DQN(   n_observations=n_observations, 
                             n_actions=n_actions,
                             model=model,
-                            optimizer=args.optimizer,
-                            lr=args.lr,
                             tau=args.tau,
                             gamma=args.gamma,
                             epsilon=args.epsilon,

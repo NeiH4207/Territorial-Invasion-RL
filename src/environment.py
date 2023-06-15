@@ -1,3 +1,4 @@
+from collections import deque
 from copy import deepcopy as dcopy
 import random
 import numpy as np
@@ -56,6 +57,8 @@ class AgentFighting(object):
         self.screen = Screen(self)
         self.players = [Player(i, self.num_players) for i in range(self.num_players)]
         self.current_player = 0
+        self.history_size = 10
+        self.history = deque(maxlen=self.history_size)
         self.reset()
         
     def render(self):
@@ -79,7 +82,9 @@ class AgentFighting(object):
         self.state.make_random_map()
         self.screen.init(self.state)
         self.num_agents = self.state.num_agents
-        return self.state.get_state()
+        state = self.state.get_state()
+        self.history.append(state)
+        return state
     
     def in_bounds(self, coords):
         return 0 <= coords[0] < self.state.height and 0 <= coords[1] < self.state.width
@@ -110,10 +115,10 @@ class AgentFighting(object):
 
     
     def get_space_size(self):
-        return self.get_state().shape
+        return self.get_state()['observation'].shape
             
     def get_state(self):
-        return self.screen.get_numpy_img().transpose(2, 0, 1)
+        return self.state.get_state()
     
     def game_ended(self):
         """

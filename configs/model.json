@@ -28,18 +28,18 @@
 
     "nnet9x9":{
         "conv1-num-filter": 64, 
-        "conv1-kernel-size": 3,
-        "conv1-stride": 2,
+        "conv1-kernel-size": 4,
+        "conv1-stride": 1,
         "conv1-padding": 1,
 
         "conv2-num-filter": 128,
         "conv2-kernel-size": 3,
-        "conv2-stride": 2,
+        "conv2-stride": 1,
         "conv2-padding": 0,
         
         "conv3-num-filter": 256,
         "conv3-kernel-size": 3,
-        "conv3-stride": 2,
+        "conv3-stride": 1,
         "conv3-padding": 0,
 
         "num-resblocks": 6,
