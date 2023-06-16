@@ -16,8 +16,7 @@ class AgentFighting(object):
         
         self.action_list = {
             'Move': ['U', 'D', 'L', 'R', 'UL', 'UR', 'DL', 'DR'],
-            'Build': ['U', 'D', 'L', 'R'],
-            'Destroy': ['U', 'D', 'L', 'R'],
+            'Change': ['U', 'D', 'L', 'R'],
             'Stay': 1
         }
         
@@ -30,15 +29,11 @@ class AgentFighting(object):
             ('Move', 'UR'): 5,
             ('Move', 'DL'): 6,
             ('Move', 'DR'): 7,
-            ('Build', 'U'): 8,
-            ('Build', 'D'): 9,
-            ('Build', 'L'): 10,
-            ('Build', 'R'): 11,
-            ('Destroy', 'U'): 12,
-            ('Destroy', 'D'): 13,
-            ('Destroy', 'L'): 14,
-            ('Destroy', 'R'): 15,
-            ('Stay', 'Stay'): 16
+            ('Change', 'U'): 8,
+            ('Change', 'D'): 9,
+            ('Change', 'L'): 10,
+            ('Change', 'R'): 11,
+            ('Stay', 'Stay'): 12
         }
         
         self.direction_map = {
@@ -52,9 +47,9 @@ class AgentFighting(object):
             'DR': (1, 1)
         }
         
-        self.n_actions = len(self.action_list['Move']) + len(self.action_list['Build']) + len(self.action_list['Destroy']) + 1
+        self.n_actions = len(self.action_list['Move']) + len(self.action_list['Change']) + 1
         self.num_players = 2
-        self.screen = Screen(self)
+        self.screen = Screen(render=self.show_screen)
         self.players = [Player(i, self.num_players) for i in range(self.num_players)]
         self.current_player = 0
         self.history_size = 10
@@ -80,7 +75,8 @@ class AgentFighting(object):
         self.state.set_players(self.players)
         self.num_agents = self.state.num_agents
         self.state.make_random_map()
-        self.screen.init(self.state)
+        if self.show_screen:
+            self.screen.init(self.state)
         self.num_agents = self.state.num_agents
         state = self.state.get_state()
         self.history.append(state)
@@ -101,15 +97,12 @@ class AgentFighting(object):
                 The second string is the corresponding item from the action list.
         """
         move_len = len(self.action_list['Move'])
-        build_len = len(self.action_list['Build'])
-        destroy_len = len(self.action_list['Destroy'])
+        change_len = len(self.action_list['Change'])
 
         if action < move_len:
             return ('Move', self.action_list['Move'][action])
-        elif action < move_len + build_len:
-            return ('Build', self.action_list['Build'][action - move_len])
-        elif action < move_len + build_len + destroy_len:
-            return ('Destroy', self.action_list['Destroy'][action - move_len - build_len])
+        elif action < move_len + change_len:
+            return ('Change', self.action_list['Change'][action - move_len])
         else:
             return ('Stay',)
 
@@ -174,15 +167,11 @@ class AgentFighting(object):
                     or self.state.castles[next_position[0]][next_position[1]] == 1:
                 is_valid_action = False
     
-        elif action_type[0] == 'Build':
+        elif action_type[0] == 'Change':
             direction = action_type[1]
             wall_coord = (self.direction_map[direction][0] + current_position[0],
                         self.direction_map[direction][1] + current_position[1])
             if not self.in_bounds(wall_coord):
-                is_valid_action = False
-                
-            elif self.state.walls[0][wall_coord[0]][wall_coord[1]] == 1 \
-                    or self.state.walls[1][wall_coord[0]][wall_coord[1]] == 1:
                 is_valid_action = False
                 
             elif self.state.castles[wall_coord[0]][wall_coord[1]] == 1 \
@@ -191,16 +180,6 @@ class AgentFighting(object):
                 
             elif wall_coord in self.state.agent_coords_in_order[0] or \
                         wall_coord in self.state.agent_coords_in_order[1]:
-                is_valid_action = False
-        elif action_type[0] == 'Destroy':
-            direction = action_type[1]
-            wall_coord = (self.direction_map[direction][0] + current_position[0],
-                        self.direction_map[direction][1] + current_position[1])
-            if not self.in_bounds(wall_coord):
-                is_valid_action = False
-                
-            elif self.state.walls[0][wall_coord[0]][wall_coord[1]] == 0 \
-                    and self.state.walls[1][wall_coord[0]][wall_coord[1]] == 0:
                 is_valid_action = False
                 
         return is_valid_action
@@ -219,7 +198,7 @@ class AgentFighting(object):
         
         if flip:
             direction = action_type[1]
-            if action_type[0] == 'Move' or action_type[0] == 'Build' or action_type[0] == 'Destroy':
+            if action_type[0] == 'Move' or action_type[0] == 'Change':
                 if direction == 'L':
                     direction = 'R'
                 elif direction == 'R':
@@ -250,7 +229,7 @@ class AgentFighting(object):
             next_state_layer = self.rotate(next_state[i], k=k)
             next_state[i] = next_state_layer
             
-        if action_type[0] == 'Move' or action_type[0] == 'Build' or action_type[0] == 'Destroy':
+        if action_type[0] == 'Move' or action_type[0] == 'Change':
             direction = action_type[1]
             for i in range(k):
                 if direction == 'L':
@@ -317,26 +296,22 @@ class AgentFighting(object):
                     self.screen.draw_agent(next_position[0], next_position[1], current_player)
                     self.screen.make_empty_square(current_position)
             
-        elif action_type[0] == 'Build':
+        elif action_type[0] == 'Change':
             direction = action_type[1]
             wall_coord = (self.direction_map[direction][0] + current_position[0],
                           self.direction_map[direction][1] + current_position[1])
+            if is_valid_action:
+                if self.state.walls[0][wall_coord[0]][wall_coord[1]] == 0 \
+                            and self.state.walls[1][wall_coord[0]][wall_coord[1]] == 0:
+                    self.state.walls[current_player][wall_coord[0]][wall_coord[1]] = 1
+                    if self.show_screen:
+                        self.screen.draw_wall(current_player, wall_coord[0], wall_coord[1])
                 
-            if is_valid_action:
-                self.state.walls[current_player][wall_coord[0]][wall_coord[1]] = 1
-                if self.show_screen:
-                    self.screen.draw_wall(current_player, wall_coord[0], wall_coord[1])
-            
-        elif action_type[0] == 'Destroy':
-            direction = action_type[1]
-            wall_coord = (self.direction_map[direction][0] + current_position[0],
-                          self.direction_map[direction][1] + current_position[1])
-            
-            if is_valid_action:
-                self.state.walls[0][wall_coord[0]][wall_coord[1]] = 0
-                self.state.walls[1][wall_coord[0]][wall_coord[1]] = 0
-                if self.show_screen:
-                    self.screen.make_empty_square(wall_coord)
+                else:
+                    self.state.walls[0][wall_coord[0]][wall_coord[1]] = 0
+                    self.state.walls[1][wall_coord[0]][wall_coord[1]] = 0
+                    if self.show_screen:
+                        self.screen.make_empty_square(wall_coord)
         else:
             pass
         

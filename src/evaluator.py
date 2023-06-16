@@ -46,7 +46,8 @@ class Evaluator():
         old_elo = elo_2
         num_wins = 0
         
-        for i in tqdm(range(self.n_evals), desc='Evaluating'):
+        _tqdm = tqdm(range(self.n_evals), desc='Evaluating (Win 0/{})'.format(self.n_evals))
+        for i in _tqdm:
             done = False
             state = self.env.get_state()
             for cnt in count():
@@ -64,7 +65,8 @@ class Evaluator():
                     if valid_actions is not None:
                         act_values[~valid_actions] = -float('inf')
                     action = int(np.argmax(act_values))
-                    
+                scores = self.env.state.scores
+                _tqdm.set_postfix_str(f'Scores: {scores[0]} / {scores[1]}')
                 next_state, _, done = self.env.step(action)
                 state = next_state
                 if done:
@@ -72,7 +74,12 @@ class Evaluator():
             winner = self.env.get_winner()
             if winner == 0:
                 num_wins += 1
-            elo_1, elo_2 = self.compute_elo(elo_1, elo_2, winner)
+            if winner == -1:
+                score = 0.5
+            else:
+                score = winner
+            _tqdm.set_description(f'Evaluating (Win {num_wins}/{self.n_evals})')
+            elo_1, elo_2 = self.compute_elo(elo_1, elo_2, score)
             if i < self.n_evals - 1:
                 self.env.reset()
         
@@ -84,5 +91,4 @@ class Evaluator():
         else:
             won_player = 1 if num_wins <= self.n_evals - num_wins else 2
             num_wins = num_wins if won_player == 2 else self.n_evals - num_wins
-            logging.info('Player {} wins {}/{}'.format(won_player, num_wins, self.n_evals))
         return num_wins / self.n_evals >= 0.55
