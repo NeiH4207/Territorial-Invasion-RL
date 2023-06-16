@@ -28,7 +28,7 @@
 
     "nnet9x9":{
         "conv1-num-filter": 64, 
-        "conv1-kernel-size": 3,
+        "conv1-kernel-size": 4,
         "conv1-stride": 1,
         "conv1-padding": 1,
 

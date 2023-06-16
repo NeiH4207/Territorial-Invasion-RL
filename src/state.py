@@ -19,6 +19,13 @@ class State(Map):
         self.gamma = 0.5
         self.limit_obs_size = 5
         
+    def get_curr_player(self):
+        return self.current_player
+    
+    def get_curr_agent(self):
+        curr_player = self.current_player
+        return self.agent_coords_in_order[curr_player][self.agent_current_idx]
+        
     @property
     def scores(self):
         score_A = self.alpha * self.wall_scores[0] + self.beta * self.castle_scores[0] + \
@@ -80,12 +87,12 @@ class State(Map):
         obs = np.stack(
             (
                 agent_board[0], 
-                agent_board[1],
-                castle_board,
                 wall_board[0], 
-                wall_board[1],
                 territory_board[0], 
-                territory_board[1]
+                agent_board[1],
+                wall_board[1],
+                territory_board[1],
+                castle_board
             ),
             axis=0
         )
@@ -104,7 +111,7 @@ class State(Map):
         return {
             'player-id': self.current_player,
             'observation': obs, 
-            'curr_agent_xy': current_agent_coord
+            'curr_agent_xy': dcopy(current_agent_coord)
             }
 
     def get_scores(self, player):

@@ -93,13 +93,17 @@ class PER(DQN):
             loss_for_prior = elementwise_loss.detach().cpu().numpy()
             new_priorities = loss_for_prior + self.prior_eps
             self.memory.update_priorities(indice_batch, new_priorities)
-        
-            target_net_state_dict = self.target_net.state_dict()
-            policy_net_state_dict = self.policy_net.state_dict()
-            for key in policy_net_state_dict:
-                target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
-            self.target_net.load_state_dict(target_net_state_dict)
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
-        self.history['loss'].append(mean_loss)
+            
+        target_net_state_dict = self.target_net.state_dict()
+        policy_net_state_dict = self.policy_net.state_dict()
+        for key in policy_net_state_dict:
+            target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
+        self.target_net.load_state_dict(target_net_state_dict)
+
+        self.policy_net.add_loss(mean_loss)
+        self.policy_net.reset_noise()
+        self.target_net.reset_noise()
+        return self.policy_net.get_loss()
         

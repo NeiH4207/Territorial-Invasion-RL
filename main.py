@@ -25,18 +25,18 @@ def argument_parser():
     parser.add_argument('-a', '--algorithm', default='rainbow')
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
-    parser.add_argument('--n-evals', type=int, default=15)
+    parser.add_argument('--n-evals', type=int, default=100)
     
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
-    parser.add_argument('--tau', type=int, default=0.03)
+    parser.add_argument('--tau', type=int, default=0.001)
     parser.add_argument('--epsilon', type=float, default=0.9)
     parser.add_argument('--epsilon-min', type=float, default=0.1)
     parser.add_argument('--epsilon-decay', type=float, default=0.99)
     parser.add_argument('--n-step', type=int, default=5)
     
     # model training arguments
-    parser.add_argument('--lr', type=float, default=1e-7)
+    parser.add_argument('--lr', type=float, default=4e-8)
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=32768)
@@ -48,7 +48,7 @@ def argument_parser():
 
 def main():
     args = argument_parser()
-    configs = json.load(open('config.json'))
+    configs = json.load(open('configs/map.json'))
     env = AgentFighting(args, configs, args.show_screen)
     n_observations = env.get_space_size()
     n_actions = env.n_actions
@@ -101,7 +101,7 @@ def main():
                             prior_eps=1e-6
                         )
     elif args.algorithm == 'rainbow':
-        algorithm = Rainbow(   n_observations=n_observations, 
+        algorithm = Rainbow(n_observations=n_observations, 
                             n_actions=n_actions,
                             model=model,
                             tau=args.tau,
@@ -117,21 +117,17 @@ def main():
                             prior_eps=1e-6,
                             n_step=args.n_step
                         )
-
-    elif args.algorithm == 'pso':
-        return
         
     else:
         raise ValueError('Algorithm {} is not supported'.format(args.algorithm))
     
     model.save(args.model_path)
     
-    not_improved_cnt = 0
-    
     for episode in range(args.num_episodes):
         done = False
         state = env.get_state()
         state = state['observation']
+        
         for cnt in count():
             env.render()
             # valid_actions = env.get_valid_actions()
@@ -148,27 +144,26 @@ def main():
             env.save_image(os.path.join(args.figure_path, 'current_state.png'))
             if done:
                 break
-        if algorithm.fully_mem(0.75):
+            
+        if algorithm.fully_mem(0.25):
             history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
             plot_history(history_loss, args.figure_path)
-        env.reset()
-        if (episode + 1) % 50 == 0:
+        
+        if (episode + 1) % 10 == 0:
             old_model = DQN(n_observations, n_actions, dueling=True).to(device)
             old_model.load(args.model_path, device)
             improved = evaluator.eval(old_model, model)
-            # if improved or history_loss[-1] == min(history_loss):
-            model.save(args.model_path)
-            #     algorithm.adaptiveEGreedy()
-            #     not_improved_cnt = 0
-            # else:
-            #     not_improved_cnt += 1
-            #     if not_improved_cnt == 10:
-            #         algorithm.load_model(args.model_path)
-            #         algorithm.reset_history()
-            #         not_improved_cnt = 0
-            #         logging.info('Model not improved for 5 consecutive evaluations. Reverting to previous model.')
-            #         algorithm.reset_memory()
+            if improved:
+                model.save(args.model_path)
+                algorithm.adaptiveEGreedy()
+            else:
+                algorithm.load_model(args.model_path)
+                algorithm.reset_history()
+                logging.info('Model not improved for 5 consecutive evaluations. Reverting to previous model.')
+                algorithm.reset_memory()
             plot_elo(model.elo_history, args.figure_path)
+            
+        env.reset()
 
 if __name__ == "__main__":
     main()
