@@ -19,7 +19,7 @@ plt.ion()
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=False)
+    parser.add_argument('--show-screen', type=bool, default=True)
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     parser.add_argument('--figure-path', type=str, default='figures/')
     parser.add_argument('--n-evals', type=int, default=5)
@@ -27,6 +27,7 @@ def argument_parser():
     parser.add_argument('--model-path-1', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--model-path-2', type=str, default='trained_models/nnet.pt')
     parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--device', type=str, default='cuda')
     return parser.parse_args()
 
 def main():
@@ -35,7 +36,7 @@ def main():
     env = AgentFighting(args, configs, args.show_screen)
     n_observations = env.get_space_size()
     n_actions = env.n_actions
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() and args.device == 'cuda' else 'cpu'
     model_1 = DQN(n_observations, n_actions).to(device)
     model_2 = DQN(n_observations, n_actions).to(device)
     

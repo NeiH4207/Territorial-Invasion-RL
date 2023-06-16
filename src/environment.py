@@ -49,7 +49,7 @@ class AgentFighting(object):
         
         self.n_actions = len(self.action_list['Move']) + len(self.action_list['Change']) + 1
         self.num_players = 2
-        self.screen = Screen(self)
+        self.screen = Screen(render=self.show_screen)
         self.players = [Player(i, self.num_players) for i in range(self.num_players)]
         self.current_player = 0
         self.history_size = 10
@@ -75,7 +75,8 @@ class AgentFighting(object):
         self.state.set_players(self.players)
         self.num_agents = self.state.num_agents
         self.state.make_random_map()
-        self.screen.init(self.state)
+        if self.show_screen:
+            self.screen.init(self.state)
         self.num_agents = self.state.num_agents
         state = self.state.get_state()
         self.history.append(state)
