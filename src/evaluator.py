@@ -72,7 +72,11 @@ class Evaluator():
             winner = self.env.get_winner()
             if winner == 0:
                 num_wins += 1
-            elo_1, elo_2 = self.compute_elo(elo_1, elo_2, winner)
+            if winner == -1:
+                score = 0.5
+            else:
+                score = winner
+            elo_1, elo_2 = self.compute_elo(elo_1, elo_2, score)
             if i < self.n_evals - 1:
                 self.env.reset()
         

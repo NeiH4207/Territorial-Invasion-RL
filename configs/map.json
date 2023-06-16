@@ -6,8 +6,8 @@
         "width-max": 11,
         "min-num-agents": 2,
         "max-num-agents": 5,
-        "min-num-turns": 60,
-        "max-num-turns": 100,
+        "min-num-turns": 30,
+        "max-num-turns": 50,
         "num-castles": 10
     }
 }

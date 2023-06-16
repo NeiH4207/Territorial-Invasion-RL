@@ -25,24 +25,21 @@ def argument_parser():
     parser.add_argument('-a', '--algorithm', default='rainbow')
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
-    parser.add_argument('--n-evals', type=int, default=100)
+    parser.add_argument('--n-evals', type=int, default=50)
     
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--tau', type=int, default=0.001)
-    parser.add_argument('--epsilon', type=float, default=0.9)
-    parser.add_argument('--epsilon-min', type=float, default=0.1)
-    parser.add_argument('--epsilon-decay', type=float, default=0.99)
     parser.add_argument('--n-step', type=int, default=5)
     
     # model training arguments
-    parser.add_argument('--lr', type=float, default=4e-8)
+    parser.add_argument('--lr', type=float, default=1e-6)
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=False)
+    parser.add_argument('--load-model', action='store_true', default=True)
     
     return parser.parse_args()
 
@@ -78,9 +75,6 @@ def main():
                             model=model,
                             tau=args.tau,
                             gamma=args.gamma,
-                            epsilon=args.epsilon,
-                            epsilon_min=args.epsilon_min,
-                            epsilon_decay=args.epsilon_decay,
                             memory_size=args.memory_size,
                             model_path=args.model_path
                         )
@@ -90,9 +84,6 @@ def main():
                             model=model,
                             tau=args.tau,
                             gamma=args.gamma,
-                            epsilon=args.epsilon,
-                            epsilon_min=args.epsilon_min,
-                            epsilon_decay=args.epsilon_decay,
                             memory_size=args.memory_size,
                             model_path=args.model_path,
                             batch_size=args.batch_size,
@@ -106,9 +97,6 @@ def main():
                             model=model,
                             tau=args.tau,
                             gamma=args.gamma,
-                            epsilon=args.epsilon,
-                            epsilon_min=args.epsilon_min,
-                            epsilon_decay=args.epsilon_decay,
                             memory_size=args.memory_size,
                             model_path=args.model_path,
                             batch_size=args.batch_size,
@@ -130,8 +118,8 @@ def main():
         
         for cnt in count():
             env.render()
-            # valid_actions = env.get_valid_actions()
-            action = algorithm.get_action(state, None)
+            valid_actions = env.get_valid_actions()
+            action = algorithm.get_action(state, valid_actions)
             next_state, reward, done = env.step(action)
             next_state = next_state['observation']
             state, action, next_state = env.get_symmetry_transition(state, action, next_state)
@@ -149,18 +137,17 @@ def main():
             history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
             plot_history(history_loss, args.figure_path)
         
-        if (episode + 1) % 10 == 0:
+        if (episode + 1) % 30 == 0 and algorithm.fully_mem(0.25):
             old_model = DQN(n_observations, n_actions, dueling=True).to(device)
             old_model.load(args.model_path, device)
             improved = evaluator.eval(old_model, model)
+            
             if improved:
                 model.save(args.model_path)
-                algorithm.adaptiveEGreedy()
             else:
                 algorithm.load_model(args.model_path)
-                algorithm.reset_history()
-                logging.info('Model not improved for 5 consecutive evaluations. Reverting to previous model.')
-                algorithm.reset_memory()
+                logging.info('Model not improved. Reverting to previous model.')
+                
             plot_elo(model.elo_history, args.figure_path)
             
         env.reset()

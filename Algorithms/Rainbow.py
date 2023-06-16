@@ -118,8 +118,6 @@ class Rainbow(DQN):
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
         
-        self.policy_net.add_loss(mean_loss)
-        
         target_net_state_dict = self.target_net.state_dict()
         policy_net_state_dict = self.policy_net.state_dict()
         for key in policy_net_state_dict:
