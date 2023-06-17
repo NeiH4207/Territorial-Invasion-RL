@@ -101,6 +101,12 @@ class DQN(nn.Module):
         self.outblock = OutBlock(config, self.flatten_dim, output_shape, dueling=dueling)
         
         self.set_optimizer(optimizer, lr)
+        
+    def get_device(self):
+        # detect device for tensor operations
+        device = self.conv1.weight.device
+        return device
+            
     
     def forward(self, s):
         s = F.dropout(F.relu(self.bn1(self.conv1(s))), p=0.3, training=self.training)

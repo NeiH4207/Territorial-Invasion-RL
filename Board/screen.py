@@ -1,5 +1,6 @@
 # MODULES
 import cv2
+import numpy as np
 import pygame
 import os 
 
@@ -22,10 +23,12 @@ class Screen():
             self.dir_path = os.path.dirname(os.path.realpath(__file__))
             self.load_image()
             pygame.display.set_caption( 'ProCon-2020' ) 
+            self.board = None
 
     def init(self, state): 
         self.height = state.height
         self.width = state.width
+        self.board = np.zeros((self.height, self.width), dtype=np.uint8)
         self.screen = pygame.display.set_mode(self.coord(self.height, self.width + 3))  
         self.screen.fill( BG_COLOR )
         self.draw_lines()
@@ -39,10 +42,10 @@ class Screen():
     def save(self, path):
         pygame.image.save(self.screen, path)
         
-    def get_numpy_img(self):
+    def get_numpy_img(self, state):
         x, y = self.state.get_curr_agent()
         self.screen.fill( BG_COLOR )
-        self.display_state_with_player_id(0)
+        self.load_state(state)
         self.screen.blit(self.cur_agent_img, self.coord(x, y))
         numpy_img = pygame.surfarray.array3d(pygame.display.get_surface()) 
         crop_size = min(numpy_img.shape[0], numpy_img.shape[1])
@@ -52,7 +55,7 @@ class Screen():
         numpy_img = cv2.resize(numpy_img, (172, 172))
         cv2.imwrite('figures/test.png', numpy_img)
         self.draw_lines()
-        self.display_state_with_player_id(0)
+        self.load_state(state)
         return numpy_img
 
     def load_image(self):
@@ -74,68 +77,64 @@ class Screen():
             pygame.image.load(self.dir_path + '/images/castle.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
         
     def load_state(self, state):
-        self.state = state
+        # ID 0: Empty
+        # ID 1: Wall A
+        # ID 2: Wall B
+        # ID 3: Agent A
+        # ID 4: Agent B
+        # ID 5: Territory A
+        # ID 6: Territory B
+        # ID 7: Castle
+        
         for i in range(self.height):
             for j in range(self.width):
                 # draw wall
                 if state.walls[0, i, j] == 1:
-                    self.draw_wall(0, i, j)
+                    if self.board[i, j] != 1:
+                        self.draw_wall(0, i, j)
+                        self.board[i, j] = 1
                     continue
                 elif state.walls[1, i, j] == 1:
-                    self.draw_wall(1, i, j)
+                    if self.board[i, j] != 2:
+                        self.draw_wall(1, i, j)
+                        self.board[i, j] = 2
                     continue
-                    
                 if state.castles[i, j] == 1:
-                    self.draw_castle(i, j)
+                    if self.board[i, j] != 7:
+                        self.draw_castle(i, j)
+                        self.board[i, j] = 7
                     continue
-                
                 if state.agents[0, i, j] == 1:
-                    self.draw_agent(i, j, 0)
+                    if self.board[i, j] != 3:
+                        self.draw_agent(i, j, 0)
+                        self.board[i, j] = 3
                     continue
                 elif state.agents[1, i, j] == 1:
-                    self.draw_agent(i, j, 1)
+                    if self.board[i, j] != 4:
+                        self.draw_agent(i, j, 1)
+                        self.board[i, j] = 4
                     continue
-                self.make_empty_square([i, j])
-                    
-        self.show_score()
-        
-    def display_state_with_player_id(self, player_id):
-        
-        for i in range(self.height):
-            for j in range(self.width):
-                # draw wall
-                if self.state.walls[player_id, i, j] == 1:
-                    self.draw_wall(0, i, j)
+                if state.territories[0, i, j] == 1:
+                    if self.board[i, j] != 5:
+                        self.draw_squares((i, j), 0)
+                        self.board[i, j] = 5
                     continue
-                elif self.state.walls[player_id^1, i, j] == 1:
-                    self.draw_wall(1, i, j)
+                elif state.territories[1, i, j] == 1:
+                    if self.board[i, j] != 6:
+                        self.draw_squares((i, j), 1)
+                        self.board[i, j] = 6
                     continue
-                    
-                if self.state.castles[i, j] == 1:
-                    self.draw_castle(i, j)
-                    continue
+                        
+                if self.board[i][j] != 0:
+                    self.make_empty_square([i, j])
+                    self.board[i, j] = 0
                 
-                if self.state.agents[player_id, i, j] == 1:
-                    self.draw_agent(i, j, player_id)
-                    continue
-                elif self.state.agents[player_id^1, i, j] == 1:
-                    self.draw_agent(i, j, player_id^1)
-                    continue
-                
-                self.make_empty_square([i, j])
-                
-                if self.state.territories[player_id, i, j] == 1:
-                    self.draw_squares((i, j), player_id)
-                    continue
-                elif self.state.territories[player_id^1, i, j] == 1:
-                    self.draw_squares((i, j), player_id^1)
-                    continue
+        self.show_score(state)
         
     def coord(self, x, y):
         return x * self.SQUARE_SIZE, y * self.SQUARE_SIZE
     
-            
-    def show_score(self):
+    def show_score(self, state):
         # self.screen.blit(self.table_img, self.coord(self.height - 1, -2))
         self.draw_rectangle((0, self.width), (self.height, self.width + 3), BG_COLOR)
         pygame.draw.line(self.screen, LINE_COLOR, self.coord(0, self.width), 
@@ -145,11 +144,11 @@ class Screen():
         
         color = LINE_COLOR
         
-        SA = myFont.render("Score: " + str(round(self.state.scores[0])), 0, color)
-        SB = myFont.render("Score: " + str(round(self.state.scores[1])), 0, color)
+        SA = myFont.render("Score: " + str(round(state.scores[0])), 0, color)
+        SB = myFont.render("Score: " + str(round(state.scores[1])), 0, color)
         
         myFont = pygame.font.SysFont("Helvetica", 20)
-        STurns = myFont.render("Steps left: " + str(self.state.remaining_turns), 0, color)
+        STurns = myFont.render("Steps left: " + str(state.remaining_turns), 0, color)
         
         text_1_coord = self.coord(1, self.width)
         text_2_coord = self.coord(1, self.width + 1)
