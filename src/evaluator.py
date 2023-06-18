@@ -85,14 +85,13 @@ class Evaluator():
                 
             _tqdm.set_description(f'Evaluating (Win {num_wins}/{self.n_evals})')
             elo_1, elo_2 = self.compute_elo(elo_1, elo_2, score)
-            if i < self.n_evals - 1:
-                self.env.reset()
+            self.env.reset()
         
         if change_elo:
             new_model.set_elo(elo_1)
             old_model.set_elo(elo_2)
             logging.info('Elo changes from {} to {} | Win {}/{}'.\
-                format(old_elo, elo_2, num_wins, self.n_evals))
+                format(old_elo, elo_1, num_wins, self.n_evals))
         else:
             won_player = 1 if num_wins <= self.n_evals - num_wins else 2
             num_wins = num_wins if won_player == 2 else self.n_evals - num_wins

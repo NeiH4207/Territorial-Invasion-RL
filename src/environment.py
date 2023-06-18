@@ -191,10 +191,8 @@ class AgentFighting(object):
             new_scores = self.state.scores
             if new_scores[current_player] > new_scores[1 - current_player]:
                 reward = 1
-            elif new_scores[current_player] < new_scores[1 - current_player]:
-                reward = -1
             else:
-                reward = 0
+                reward = -1
         else:
             reward = -1
             

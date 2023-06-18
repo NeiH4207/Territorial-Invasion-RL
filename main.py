@@ -21,7 +21,7 @@ from Algorithms.PER import PER
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=False)
+    parser.add_argument('--show-screen', type=bool, default=True)
     parser.add_argument('-a', '--algorithm', default='rainbow')
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
