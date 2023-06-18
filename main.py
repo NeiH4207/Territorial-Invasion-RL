@@ -140,7 +140,7 @@ def main():
         if (episode + 1) % 30 == 0 and algorithm.fully_mem(0.25):
             best_model = DQN(n_observations, n_actions, dueling=True).to(device)
             best_model.load(best_model_path, device)
-            improved = evaluator.eval(best_model, model)
+            improved = evaluator.eval(model, best_model)
             
             if improved:
                 model.save(best_model_path)

@@ -39,10 +39,10 @@ class Evaluator():
         rn1 = rn1 if rn1 > 0 else 0
         return (rn0, rn1)
         
-    def eval(self, old_model, new_model, change_elo=True):
+    def eval(self, new_model, old_model, change_elo=True):
         
-        elo_1 = old_model.get_elo()
-        elo_2 = new_model.get_elo()
+        elo_1 = new_model.get_elo()
+        elo_2 = old_model.get_elo()
         old_elo = elo_2
         num_wins = 0
         
