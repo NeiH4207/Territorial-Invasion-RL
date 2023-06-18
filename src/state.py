@@ -4,8 +4,9 @@ from src.map import Map
 from copy import deepcopy as dcopy
 
 class State(Map):
-    def __init__(self, configs):
+    def __init__(self, configs, action_space):
         super().__init__(configs)
+        self.action_space = action_space
         self.num_players = 2
         self.current_player = 0
         self.num_agents = None
@@ -18,6 +19,39 @@ class State(Map):
         self.beta = 10
         self.gamma = 0.5
         self.limit_obs_size = 5
+        
+        self.action_map = {
+            ('Move', 'U'): 0,
+            ('Move', 'D'): 1,
+            ('Move', 'L'): 2,
+            ('Move', 'R'): 3,
+            ('Move', 'UL'): 4,
+            ('Move', 'UR'): 5,
+            ('Move', 'DL'): 6,
+            ('Move', 'DR'): 7,
+            ('Change', 'U'): 8,
+            ('Change', 'D'): 9,
+            ('Change', 'L'): 10,
+            ('Change', 'R'): 11,
+            ('Stay', 'Stay'): 12
+        }
+        
+        self.direction_map = {
+            'U': (-1, 0),
+            'D': (1, 0),
+            'L': (0, -1),
+            'R': (0, 1),
+            'UL': (-1, -1),
+            'UR': (-1, 1),
+            'DL': (1, -1),
+            'DR': (1, 1)
+        }
+        
+    def current_position(self):
+        return self.agent_coords_in_order[self.current_player][self.agent_current_idx]
+        
+    def copy(self):
+        return dcopy(self)
         
     def get_curr_player(self):
         return self.current_player
@@ -200,3 +234,125 @@ class State(Map):
             
         for player in range(self.num_players):
             self.players[player].scores = self.scores[player]
+    
+    def get_type_action(self, action):
+        """
+        Returns the type of the given action and the corresponding action list item.
+
+        :param action: An integer representing the index of the action in the flattened action list.
+        :return: A tuple of strings. The first string is the type of the action ('Move', 'Build', 'Destroy', or 'Stay').
+                The second string is the corresponding item from the action list.
+        """
+        move_len = len(self.action_space['Move'])
+        change_len = len(self.action_space['Change'])
+
+        if action < move_len:
+            return ('Move', self.action_space['Move'][action])
+        elif action < move_len + change_len:
+            return ('Change', self.action_space['Change'][action - move_len])
+        else:
+            return ('Stay',)
+    
+    def is_valid_action(self, action):
+        current_player = self.current_player
+        agent_coords_in_order = self.agent_coords_in_order
+        agent_current_idx = self.agent_current_idx
+        current_position = agent_coords_in_order[current_player][agent_current_idx]
+        
+        valid = True
+        action_type = self.get_type_action(action)
+        if action_type[0] == 'Move':
+            direction = action_type[1]
+            next_position = (self.direction_map[direction][0] + current_position[0],
+                        self.direction_map[direction][1] + current_position[1])
+            if not self.in_bounds(next_position[0], next_position[1]):
+                valid = False
+                
+            elif next_position in self.agent_coords_in_order[0] or \
+                        next_position in self.agent_coords_in_order[1]:
+                valid = False
+                
+            elif self.agents[current_player][next_position[0]][next_position[1]] == 1:
+                ''' in turn (N agent actions at the same time), only one agent can move at an area, 
+                    so the other agent is moved into the same area befores
+                    agents save next coordinates but agent_coords_in_order is not updated to check this '''
+                valid = False
+                
+            elif self.walls[0][next_position[0]][next_position[1]] == 1 \
+                    or self.walls[1][next_position[0]][next_position[1]] == 1:
+                valid = False
+                
+            elif self.castles[next_position[0]][next_position[1]] == 1 \
+                    or self.castles[next_position[0]][next_position[1]] == 1:
+                valid = False
+    
+        elif action_type[0] == 'Change':
+            direction = action_type[1]
+            wall_coord = (self.direction_map[direction][0] + current_position[0],
+                        self.direction_map[direction][1] + current_position[1])
+            if not self.in_bounds(wall_coord[0], wall_coord[1]):
+                valid = False
+                
+            elif self.castles[wall_coord[0]][wall_coord[1]] == 1 \
+                    or self.castles[wall_coord[0]][wall_coord[1]] == 1:
+                valid = False
+                
+            elif wall_coord in self.agent_coords_in_order[0] or \
+                        wall_coord in self.agent_coords_in_order[1]:
+                valid = False
+                
+        return valid
+    
+    
+    def is_terminal(self):
+        """
+        Checks if the game has ended by evaluating if there are any remaining turns left.
+
+        :return: Boolean value indicating whether or not the game has ended.
+        """
+        return self.remaining_turns == 0
+    
+    
+    def next(self, action):
+        action_type = self.get_type_action(action)
+        current_player = self.current_player
+        agent_current_idx = self.agent_current_idx
+        agent_coords_in_order = self.agent_coords_in_order
+        current_position = agent_coords_in_order[current_player][agent_current_idx]
+        is_valid_action = self.is_valid_action(action)
+        
+        if action_type[0] == 'Move':
+            direction = action_type[1]
+            next_position = (self.direction_map[direction][0] + current_position[0],
+                          self.direction_map[direction][1] + current_position[1])
+            
+            if is_valid_action:
+                self.agents[current_player][next_position[0]][next_position[1]] = 1
+                self.agents[current_player][current_position[0]][current_position[1]] = 0
+            
+        elif action_type[0] == 'Change':
+            direction = action_type[1]
+            wall_coord = (self.direction_map[direction][0] + current_position[0],
+                          self.direction_map[direction][1] + current_position[1])
+            if is_valid_action:
+                if self.walls[0][wall_coord[0]][wall_coord[1]] == 0 \
+                            and self.walls[1][wall_coord[0]][wall_coord[1]] == 0:
+                    self.walls[current_player][wall_coord[0]][wall_coord[1]] = 1
+                
+                else:
+                    self.walls[0][wall_coord[0]][wall_coord[1]] = 0
+                    self.walls[1][wall_coord[0]][wall_coord[1]] = 0
+        else:
+            pass
+        
+        if is_valid_action:
+            self.update_score()
+            
+        self.agent_current_idx = (agent_current_idx + 1) % self.num_agents
+        if self.agent_current_idx == 0:
+            self.current_player = (self.current_player + 1) % self.num_players
+            self.update_agent_coords_in_order()
+            if self.current_player == 0:
+                self.remaining_turns -= 1
+                
+        return is_valid_action

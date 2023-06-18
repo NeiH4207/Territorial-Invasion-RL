@@ -6,7 +6,11 @@ from __future__ import division
 import json
 import logging
 import time
+
+import torch
 from Algorithms.RandomStep import RandomStep
+from Algorithms.Minimax import Minimax
+from models.AgentDQN import DQN
 from src.environment import AgentFighting
 log = logging.getLogger(__name__)
 from random import seed
@@ -16,18 +20,31 @@ def argument_parser():
     parser = ArgumentParser()
     parser.add_argument('--show-screen', type=bool, default=True)
     parser.add_argument('--render', type=bool, default=True)
+    parser.add_argument('--model-path', type=str, default='trained_models/nnet2.pt')
+    parser.add_argument('--device', type=str, default='cuda')
     return parser.parse_args()
 
 def main():
     args = argument_parser()
     configs = json.load(open('configs/map.json'))
     env = AgentFighting(args, configs, args.show_screen)
-    algorithm = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)
-    state = env.reset()
+    n_observations = env.get_space_size()
+    n_actions = env.n_actions
+    
+    device = 'cuda' if torch.cuda.is_available() and args.device == 'cuda' else 'cpu'
+    model = DQN(n_observations, n_actions).to(device)
+    model.load(args.model_path)
+    
+    algorithm = Minimax(env, model, max_depth=7)
+    env.reset()
+    if args.show_screen:
+        env.render()
+    state = env.get_state(obj=True)
     while not env.is_terminal():
         action = algorithm.get_action(state)
         _ = env.step(action, verbose=True)
         env.render()
+        state = env.get_state(obj=True)
     
     winner = env.get_winner()
     if winner == -1:

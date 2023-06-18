@@ -25,9 +25,6 @@ def argument_parser():
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--tau', type=int, default=0.01)
-    parser.add_argument('--epsilon', type=float, default=0.9)
-    parser.add_argument('--epsilon-min', type=float, default=0.005)
-    parser.add_argument('--epsilon-decay', type=float, default=0.95)
     parser.add_argument('--n-step', type=int, default=3)
     
     # model training arguments
@@ -64,9 +61,6 @@ def main():
                     model=model,
                     tau=args.tau,
                     gamma=args.gamma,
-                    epsilon=args.epsilon,
-                    epsilon_min=args.epsilon_min,
-                    epsilon_decay=args.epsilon_decay,
                     memory_size=args.memory_size,
                     model_path=args.model_path,
                     batch_size=args.batch_size,
@@ -90,7 +84,6 @@ def main():
             env.render()
             action = algorithm.get_action(state)
             next_state, reward, done, truncated, _ = env.step(action)
-            reward = reward if not done else -1
             transition = [state, action, reward, next_state, done]
             one_step_transition = algorithm.memory_n.store(*transition)
             if one_step_transition:
@@ -102,11 +95,8 @@ def main():
         if episode % 3 == 0 and algorithm.fully_mem(0.25):
             history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
             plot_history(history_loss, args.figure_path)
-            algorithm.adaptiveEGreedy()
             
         print('Episode {} finished after {} timesteps.'.format(episode, cnt))
-                
-    time.sleep(3)
 
 if __name__ == "__main__":
     main()

@@ -29,8 +29,8 @@ def argument_parser():
     
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
-    parser.add_argument('--tau', type=int, default=0.001)
-    parser.add_argument('--n-step', type=int, default=5)
+    parser.add_argument('--tau', type=int, default=0.005)
+    parser.add_argument('--n-step', type=int, default=3)
     
     # model training arguments
     parser.add_argument('--lr', type=float, default=1e-6)
@@ -97,6 +97,9 @@ def main():
                             model=model,
                             tau=args.tau,
                             gamma=args.gamma,
+                            epsilon=args.epsilon,
+                            epsilon_min=args.epsilon_min,
+                            epsilon_decay=args.epsilon_decay,
                             memory_size=args.memory_size,
                             model_path=args.model_path,
                             batch_size=args.batch_size,
@@ -109,7 +112,8 @@ def main():
     else:
         raise ValueError('Algorithm {} is not supported'.format(args.algorithm))
     
-    model.save(args.model_path)
+    best_model_path = args.model_path.replace('.pt', '_best.pt')
+    model.save(best_model_path)
     
     for episode in range(args.num_episodes):
         done = False
@@ -138,15 +142,12 @@ def main():
             plot_history(history_loss, args.figure_path)
         
         if (episode + 1) % 30 == 0 and algorithm.fully_mem(0.25):
-            old_model = DQN(n_observations, n_actions, dueling=True).to(device)
-            old_model.load(args.model_path, device)
-            improved = evaluator.eval(old_model, model)
+            best_model = DQN(n_observations, n_actions, dueling=True).to(device)
+            best_model.load(best_model_path, device)
+            improved = evaluator.eval(best_model, model)
             
             if improved:
-                model.save(args.model_path)
-            else:
-                algorithm.load_model(args.model_path)
-                logging.info('Model not improved. Reverting to previous model.')
+                model.save(best_model_path)
                 
             plot_elo(model.elo_history, args.figure_path)
             
