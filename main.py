@@ -39,7 +39,7 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--load-model', action='store_true')
     
     return parser.parse_args()
 
@@ -97,9 +97,6 @@ def main():
                             model=model,
                             tau=args.tau,
                             gamma=args.gamma,
-                            epsilon=args.epsilon,
-                            epsilon_min=args.epsilon_min,
-                            epsilon_decay=args.epsilon_decay,
                             memory_size=args.memory_size,
                             model_path=args.model_path,
                             batch_size=args.batch_size,
@@ -133,7 +130,6 @@ def main():
                 algorithm.memory.store(*one_step_transition)
             algorithm.memorize(state, action, reward, next_state, done)
             state = next_state
-            env.save_image(os.path.join(args.figure_path, 'current_state.png'))
             if done:
                 break
             

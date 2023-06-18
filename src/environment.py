@@ -79,16 +79,15 @@ class AgentFighting(object):
             
     def get_winner(self):
         """
-        Returns the winner of the game.
-
-        :return: An integer representing the winner of the game.
+        Returns the winner of the game based on the scores of the two players.
+        :return: 1 if player 1 wins, -1 if player 2 wins, and 0 if it's a tie.
         """
         if self.state.scores[0] > self.state.scores[1]:
-            return 0
-        elif self.state.scores[1] > self.state.scores[0]:
             return 1
-        else:
+        elif self.state.scores[1] > self.state.scores[0]:
             return -1
+        else:
+            return 0
     
     def flip(self, matrix):
         return np.flip(matrix, axis=1)
@@ -182,7 +181,6 @@ class AgentFighting(object):
             reward: The reward obtained from the step.
         """
         current_player = self.state.current_player
-        previous_scores = self.state.scores
         is_valid_action = self.state.next(action)
             
         if self.show_screen:
@@ -191,10 +189,8 @@ class AgentFighting(object):
         
         if is_valid_action:
             new_scores = self.state.scores
-            diff_previous_scores = previous_scores[current_player] - previous_scores[1 - current_player]
-            diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
-            reward = diff_new_score - diff_previous_scores
+            reward = new_scores[current_player] > new_scores[1 - current_player]
         else:
-            reward = 0
-                
+            reward = -1
+            
         return self.get_state(), reward, self.is_terminal()

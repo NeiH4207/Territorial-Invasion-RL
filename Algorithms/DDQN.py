@@ -16,14 +16,6 @@ class DDQN(DQN):
                          gamma, epsilon, epsilon_min, epsilon_decay,
                          memory_size, model_path)
         
-    def get_action(self, state, valid_actions=None):
-        state = torch.FloatTensor(np.array(state)).to(self.device)
-        act_values = self.policy_net.predict(state)[0]
-        # set value of invalid actions to -inf
-        if valid_actions is not None:
-            act_values[~valid_actions] = -float('inf')
-        return int(np.argmax(act_values))  # returns action
-        
     def replay(self, batch_size, verbose=False):
 
         if len(self.memory) < batch_size:
@@ -57,7 +49,7 @@ class DDQN(DQN):
             # Compute Huber loss
             criterion = nn.SmoothL1Loss()
             loss = criterion(state_action_values, expected_state_action_values)
-                # Optimize the model
+            # Optimize the model
             self.policy_net.optimizer.zero_grad()
             loss.backward()
             # In-place gradient clipping

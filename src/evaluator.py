@@ -72,12 +72,17 @@ class Evaluator():
                 if done:
                     break
             winner = self.env.get_winner()
-            if winner == 0:
+            
+            if winner == 1:
                 num_wins += 1
-            if winner == -1:
-                score = 0.5
+                
+            if winner == 1:
+                score = 1
+            elif winner == -1:
+                score = 0
             else:
-                score = winner
+                score = 0.5
+                
             _tqdm.set_description(f'Evaluating (Win {num_wins}/{self.n_evals})')
             elo_1, elo_2 = self.compute_elo(elo_1, elo_2, score)
             if i < self.n_evals - 1:
