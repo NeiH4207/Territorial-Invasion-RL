@@ -180,7 +180,7 @@ class AgentFighting(object):
         Returns:
             reward: The reward obtained from the step.
         """
-        current_player = self.state.current_player
+        current_player = self.state.get_curr_player()
         is_valid_action = self.state.next(action)
             
         if self.show_screen:
@@ -189,7 +189,12 @@ class AgentFighting(object):
         
         if is_valid_action:
             new_scores = self.state.scores
-            reward = new_scores[current_player] > new_scores[1 - current_player]
+            if new_scores[current_player] > new_scores[1 - current_player]:
+                reward = 1
+            elif new_scores[current_player] < new_scores[1 - current_player]:
+                reward = -1
+            else:
+                reward = 0
         else:
             reward = -1
             

@@ -86,7 +86,7 @@ class State(Map):
     
     def to_opponent(self):
         state = dcopy(self)
-        state.current_player ^= 1
+        state.get_curr_player ^= 1
         return state
 
     def transition_matrix(self, matrix, vector):

@@ -89,8 +89,8 @@ class Evaluator():
                 self.env.reset()
         
         if change_elo:
-            old_model.set_elo(elo_1)
-            new_model.set_elo(elo_2)
+            new_model.set_elo(elo_1)
+            old_model.set_elo(elo_2)
             logging.info('Elo changes from {} to {} | Win {}/{}'.\
                 format(old_elo, elo_2, num_wins, self.n_evals))
         else:

@@ -48,7 +48,7 @@ class Minimax():
     
     def minimax(self, state, alpha, beta, depth, is_max_state):
         if depth == 0 or state.is_terminal():
-            curr_player = state.current_player
+            curr_player = state.get_curr_player()
             diff = state.scores[curr_player] - state.scores[curr_player ^ 1]
             return diff
 
