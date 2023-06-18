@@ -20,11 +20,11 @@ def argument_parser():
 
 def main():
     args = argument_parser()
-    configs = json.load(open('config.json'))
+    configs = json.load(open('configs/map.json'))
     env = AgentFighting(args, configs, args.show_screen)
     algorithm = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)
     state = env.reset()
-    while not env.game_ended():
+    while not env.is_terminal():
         action = algorithm.get_action(state)
         _ = env.step(action, verbose=True)
         env.render()

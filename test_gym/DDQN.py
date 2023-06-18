@@ -29,11 +29,6 @@ def argument_parser():
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--tau', type=int, default=0.01)
-    parser.add_argument('--epsilon', type=float, default=0.9)
-    parser.add_argument('--epsilon-min', type=float, default=0.005)
-    parser.add_argument('--epsilon-decay', type=float, default=0.95)
-    parser.add_argument('--n-step', type=int, default=3)
-    
     # model training arguments
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--batch-size', type=int, default=128)
@@ -67,9 +62,6 @@ def main():
                         model=model,
                         tau=args.tau,
                         gamma=args.gamma,
-                        epsilon=args.epsilon,
-                        epsilon_min=args.epsilon_min,
-                        epsilon_decay=args.epsilon_decay,
                         memory_size=args.memory_size,
                         model_path=args.model_path
                     )

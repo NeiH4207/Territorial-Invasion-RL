@@ -187,6 +187,7 @@ class AgentFighting(object):
             
         if self.show_screen:
             self.screen.load_state(self.state)
+            self.screen.render()
         
         if is_valid_action:
             new_scores = self.state.scores
