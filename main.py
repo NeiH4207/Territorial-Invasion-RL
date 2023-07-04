@@ -12,7 +12,7 @@ import torch
 from Algorithms.Rainbow import Rainbow
 from src.evaluator import Evaluator
 from src.environment import AgentFighting
-from src.utils import plot_elo, plot_history
+from src.utils import *
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 from argparse import ArgumentParser
 from models.AgentDQN import DQN
@@ -29,7 +29,7 @@ def argument_parser():
     
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
-    parser.add_argument('--tau', type=int, default=0.005)
+    parser.add_argument('--tau', type=int, default=0.01)
     parser.add_argument('--n-step', type=int, default=3)
     
     # model training arguments
@@ -39,7 +39,7 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--load-model', action='store_true')
     
     return parser.parse_args()
 
@@ -97,9 +97,6 @@ def main():
                             model=model,
                             tau=args.tau,
                             gamma=args.gamma,
-                            epsilon=args.epsilon,
-                            epsilon_min=args.epsilon_min,
-                            epsilon_decay=args.epsilon_decay,
                             memory_size=args.memory_size,
                             model_path=args.model_path,
                             batch_size=args.batch_size,
@@ -126,22 +123,21 @@ def main():
             action = algorithm.get_action(state, valid_actions)
             next_state, reward, done = env.step(action)
             next_state = next_state['observation']
-            state, action, next_state = env.get_symmetry_transition(state, action, next_state)
+            # state, action, next_state = env.get_symmetry_transition(state, action, next_state)
             transition = [state, action, reward, next_state, done]
             one_step_transition = algorithm.memory_n.store(*transition)
             if one_step_transition:
                 algorithm.memory.store(*one_step_transition)
             algorithm.memorize(state, action, reward, next_state, done)
             state = next_state
-            env.save_image(os.path.join(args.figure_path, 'current_state.png'))
             if done:
                 break
             
-        if algorithm.fully_mem(0.25):
+        if episode % 3 == 0 and algorithm.fully_mem(0.25):
             history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
-            plot_history(history_loss, args.figure_path)
+            plot_timeseries(history_loss, args.figure_path, 'episode', 'loss', 'Training Loss')
         
-        if (episode + 1) % 30 == 0 and algorithm.fully_mem(0.25):
+        if (episode + 1) % 100 == 0:
             best_model = DQN(n_observations, n_actions, dueling=True).to(device)
             best_model.load(best_model_path, device)
             improved = evaluator.eval(best_model, model)
@@ -149,7 +145,7 @@ def main():
             if improved:
                 model.save(best_model_path)
                 
-            plot_elo(model.elo_history, args.figure_path)
+            plot_timeseries(model.elo_history, args.figure_path, 'episode', 'elo', 'Elo')
             
         env.reset()
 

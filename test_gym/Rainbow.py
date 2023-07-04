@@ -69,7 +69,8 @@ def main():
                     batch_size=args.batch_size,
                     alpha=0.2,
                     beta=0.6,
-                    prior_eps=1e-6)
+                    prior_eps=1e-6,
+                    n_step=args.n_step)
         
     if args.model_path:
         model_dir = os.path.dirname(args.model_path)
