@@ -141,8 +141,8 @@ class DQN():
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
         
-    def load_model(self, path):
-        self.policy_net.load(path)
+    def load_model(self, path, device=None):
+        self.policy_net.load(path, device=device)
         self.target_net = deepcopy(self.policy_net)
         
     def save_model(self):

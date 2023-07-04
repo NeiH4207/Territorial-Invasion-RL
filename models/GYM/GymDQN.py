@@ -88,10 +88,10 @@ class GymDQN(nn.Module):
     
     def save(self, path=None):
         torch.save(self.state_dict(), path)
-        print("Model saved at {}".format(path))
         
-    def load(self, path=None):
+    def load(self, path=None, device=None):
         if path is None:
             raise ValueError("Path is not defined")
-        self.load_state_dict(torch.load(path, map_location=torch.device(self.device)))
-        print('Model loaded from {}'.format(path))
+        if device is None:
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.load_state_dict(torch.load(path, map_location=torch.device(device)))
