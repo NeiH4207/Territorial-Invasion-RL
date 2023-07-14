@@ -68,6 +68,7 @@ class DQN():
             'loss': [],
             'reward': []
         }
+        self.counter = 0
         
     def fully_mem(self, perc=1.0):
         return len(self.memory) / (self.memory_size - 1) >= perc
@@ -124,18 +125,29 @@ class DQN():
             torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
             self.policy_net.optimizer.step()
         
-            target_net_state_dict = self.target_net.state_dict()
-            policy_net_state_dict = self.policy_net.state_dict()
-            for key in policy_net_state_dict:
-                target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
-            self.target_net.load_state_dict(target_net_state_dict)
+            self.soft_update()
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
             
         self.policy_net.add_loss(mean_loss)
         self.policy_net.reset_noise()
         self.target_net.reset_noise()
+        
+        if self.counter % int(1 / self.tau) == 0:
+            self.hard_update()
+            
         return self.policy_net.get_loss()
+    
+    def soft_update(self):
+        target_net_state_dict = self.target_net.state_dict()
+        policy_net_state_dict = self.policy_net.state_dict()
+        for key in policy_net_state_dict:
+            target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
+        self.target_net.load_state_dict(target_net_state_dict)
+        self.counter += 1
+        
+    def hard_update(self):
+        self.target_net.load_state_dict(self.policy_net.state_dict())
         
     def adaptiveEGreedy(self):
         if self.epsilon > self.epsilon_min:

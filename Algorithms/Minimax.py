@@ -6,10 +6,10 @@ from src.state import State
 
 
 class Minimax():
-    def __init__(self, env, model, handicap=4, max_depth=4):
+    def __init__(self, env, model=None, handicap=4, max_depth=4):
         self.env = env
         self.model = model
-        self.handicap = handicap
+        self.handicap = self.env.n_actions
         self.max_depth = max_depth
         
     def get_all_valid_actions(self, state: State):
@@ -20,18 +20,17 @@ class Minimax():
         return valid_actions
         
     def get_top_moves(self, state: State, n: int, is_max_state: bool):
-        obs = state.get_state()['observation']
-        obs = torch.from_numpy(obs).float().to(self.model.get_device())
-        evaluations = self.model(obs.unsqueeze(0))[0]
+        evaluations = np.zeros(self.env.n_actions)
         for action in range(self.env.n_actions):
             if not state.is_valid_action(action):
                 evaluations[action] = -9999 if is_max_state else 9999
-        return evaluations.argsort(descending=is_max_state)[:n].tolist()
+        return evaluations.argsort()[:n].tolist()
     
     def get_action(self, state: State):
         best_value = -9999
 
         top_actions = self.get_top_moves(state, self.handicap, True)
+        best_action = top_actions[0]
         
         for action in top_actions:
             next_state = state.copy()

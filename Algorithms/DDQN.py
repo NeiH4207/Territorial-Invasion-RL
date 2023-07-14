@@ -63,15 +63,10 @@ class DDQN(DQN):
             # In-place gradient clipping
             torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
             self.policy_net.optimizer.step()
+            self.soft_update()
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
             
-            target_net_state_dict = self.target_net.state_dict()
-            policy_net_state_dict = self.policy_net.state_dict()
-            for key in policy_net_state_dict:
-                target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
-            self.target_net.load_state_dict(target_net_state_dict)
-
         self.policy_net.add_loss(mean_loss)
         self.policy_net.reset_noise()
         self.target_net.reset_noise()

@@ -24,10 +24,10 @@ def argument_parser():
     parser.add_argument('--figure-path', type=str, default='figures/')
     parser.add_argument('--n-evals', type=int, default=5)
     
-    parser.add_argument('--model-path-1', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet.pt')
+    parser.add_argument('--model-path-1', type=str, default='trained_models/nnet_best.pt')
+    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet_best.pt')
     parser.add_argument('--load-model', action='store_true', default=True)
-    parser.add_argument('--device', type=str, default='cuda')
+    parser.add_argument('--device', type=str, default='cpu')
     return parser.parse_args()
 
 def main():
@@ -41,8 +41,8 @@ def main():
     model_2 = DQN(n_observations, n_actions).to(device)
     
     if args.load_model:
-        model_1.load(args.model_path_1)
-        model_2.load(args.model_path_2)
+        model_1.load(args.model_path_1, device)
+        model_2.load(args.model_path_2, device)
     
     evaluator = Evaluator(env, n_evals=args.n_evals, device=device)
     

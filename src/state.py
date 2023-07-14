@@ -130,7 +130,7 @@ class State(Map):
             ),
             axis=0
         )
-
+        
         # Standardized variable names to improve readability and changed key name
         current_agent_idx = self.agent_current_idx
         current_agent_coord = self.agent_coords_in_order[self.current_player][current_agent_idx]
@@ -141,6 +141,8 @@ class State(Map):
             
         # crop obs to limit_obs_size
         obs = obs[:, :self.limit_obs_size*2-1, :self.limit_obs_size*2-1]
+        masked_obs = [(obs[0] != -1) * 1]
+        obs = np.concatenate([obs, masked_obs], axis=0)
         agent_current_board[current_agent_coord[0], current_agent_coord[1]] = 1
         return {
             'player-id': self.current_player,

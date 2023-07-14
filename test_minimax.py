@@ -32,10 +32,10 @@ def main():
     n_actions = env.n_actions
     
     device = 'cuda' if torch.cuda.is_available() and args.device == 'cuda' else 'cpu'
-    model = DQN(n_observations, n_actions).to(device)
-    model.load(args.model_path)
+    # model = DQN(n_observations, n_actions).to(device)
+    # model.load(args.model_path)
     
-    algorithm = Minimax(env, model, max_depth=7)
+    algorithm = Minimax(env, max_depth=7)
     env.reset()
     if args.show_screen:
         env.render()

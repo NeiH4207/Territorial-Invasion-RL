@@ -20,6 +20,7 @@ def argument_parser():
     parser = ArgumentParser()
     # Game options
     parser.add_argument('--show-screen', type=bool)
+    parser.add_argument('--render-last', type=bool, default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
     
     # DDQN arguments

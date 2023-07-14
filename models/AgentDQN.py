@@ -25,7 +25,8 @@ class ResBlock(nn.Module):
     def forward(self, x):
         residual = x
         out = self.conv1(x)
-        out = F.relu(self.bn1(out))
+        out = self.bn1(out)
+        out = F.relu(out)
         out = self.conv2(out)
         out = self.bn2(out)
         out += residual
@@ -51,7 +52,7 @@ class OutBlock(nn.Module):
             self.Qvalue = nn.Linear(config['fc2-num-units'], output_shape)
     
     def forward(self, s):
-        out = F.dropout(F.relu(self.fc1(s)), p=self.config['fc1-dropout'], training=self.training)  # batch_size x 1024
+        out = F.relu(self.fc1(s))
         out = F.relu(self.fc2(out))
         if self.dueling:
             value = self.value(out) 
@@ -79,25 +80,16 @@ class DQN(nn.Module):
         self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
                                stride=config['conv1-stride'], padding=config['conv1-padding'])
         
-        self.conv2 = nn.Conv2d(config['conv1-num-filter'], config['conv2-num-filter'], kernel_size=config['conv2-kernel-size'],
-                                 stride=config['conv2-stride'], padding=config['conv2-padding'])
-        self.conv3 = nn.Conv2d(config['conv2-num-filter'], config['conv3-num-filter'], kernel_size=config['conv3-kernel-size'],
-                                    stride=config['conv3-stride'], padding=config['conv3-padding'])
-        
         self.bn1 = nn.BatchNorm2d(config['conv1-num-filter'])
-        self.bn2 = nn.BatchNorm2d(config['conv2-num-filter'])
-        self.bn3 = nn.BatchNorm2d(config['conv3-num-filter'])
         
         for block in range(config['num-resblocks']):
-            setattr(self, "res_%i" % block,ResBlock(config['conv3-num-filter'],
-                                                    config['conv3-num-filter'],
+            setattr(self, "res_%i" % block,ResBlock(config['conv1-num-filter'],
+                                                    config['conv1-num-filter'],
                                                     config['resblock-kernel-size']))
         
         
         self.out_conv1_dim = int((self.input_shape[1] - config['conv1-kernel-size'] + 2 * config['conv1-padding']) / config['conv1-stride'] + 1)
-        self.out_conv2_dim = int((self.out_conv1_dim - config['conv2-kernel-size'] + 2 * config['conv2-padding']) / config['conv2-stride'] + 1)
-        self.out_conv3_dim = int((self.out_conv2_dim - config['conv3-kernel-size'] + 2 * config['conv3-padding']) / config['conv3-stride'] + 1)
-        self.flatten_dim = config['conv3-num-filter'] * ((self.out_conv3_dim) ** 2)
+        self.flatten_dim = config['conv1-num-filter'] * ((self.out_conv1_dim) ** 2)
         self.outblock = OutBlock(config, self.flatten_dim, output_shape, dueling=dueling)
         
         self.set_optimizer(optimizer, lr)
@@ -109,16 +101,14 @@ class DQN(nn.Module):
             
     
     def forward(self, s):
-        s = F.dropout(F.relu(self.bn1(self.conv1(s))), p=0.3, training=self.training)
-        s = F.dropout(F.relu(self.bn2(self.conv2(s))), p=0.3, training=self.training)
-        s = F.dropout(F.relu(self.bn3(self.conv3(s))), p=0.3, training=self.training)
+        out = F.relu(self.bn1(self.conv1(s)))
         
         for block in range(self.config['num-resblocks']):
-            s = getattr(self, "res_%i" % block)(s)
+            out = getattr(self, "res_%i" % block)(out)
             
-        s = s.view(-1, self.flatten_dim)
-        s = self.outblock(s)
-        return s
+        out = out.view(-1, self.flatten_dim)
+        out = self.outblock(out)
+        return out
     
     def get_elo(self):
         return self.elo_history[-1]

@@ -30,16 +30,16 @@ def argument_parser():
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--tau', type=int, default=0.01)
-    parser.add_argument('--n-step', type=int, default=3)
+    parser.add_argument('--n-step', type=int, default=5)
     
     # model training arguments
-    parser.add_argument('--lr', type=float, default=1e-6)
-    parser.add_argument('--batch-size', type=int, default=128)
+    parser.add_argument('--lr', type=float, default=2e-6)
+    parser.add_argument('--batch-size', type=int, default=512)
     parser.add_argument('--optimizer', type=str, default='adamw')
-    parser.add_argument('--memory-size', type=int, default=32768)
+    parser.add_argument('--memory-size', type=int, default=32768 * 4)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true')
+    parser.add_argument('--load-model', action='store_true', default=False)
     
     return parser.parse_args()
 
@@ -111,6 +111,7 @@ def main():
     
     best_model_path = args.model_path.replace('.pt', '_best.pt')
     model.save(best_model_path)
+    best_model = DQN(n_observations, n_actions, dueling=True).to(device)
     
     for episode in range(args.num_episodes):
         done = False
@@ -123,7 +124,7 @@ def main():
             action = algorithm.get_action(state, valid_actions)
             next_state, reward, done = env.step(action)
             next_state = next_state['observation']
-            # state, action, next_state = env.get_symmetry_transition(state, action, next_state)
+            state, action, next_state = env.get_symmetry_transition(state, action, next_state)
             transition = [state, action, reward, next_state, done]
             one_step_transition = algorithm.memory_n.store(*transition)
             if one_step_transition:
@@ -133,17 +134,18 @@ def main():
             if done:
                 break
             
-        if episode % 3 == 0 and algorithm.fully_mem(0.25):
+        if episode % 10 == 0:
             history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
             plot_timeseries(history_loss, args.figure_path, 'episode', 'loss', 'Training Loss')
         
-        if (episode + 1) % 100 == 0:
-            best_model = DQN(n_observations, n_actions, dueling=True).to(device)
+        if episode % 100 == 0 and algorithm.fully_mem(0.5):
             best_model.load(best_model_path, device)
             improved = evaluator.eval(best_model, model)
             
             if improved:
                 model.save(best_model_path)
+                
+            model.save(args.model_path)
                 
             plot_timeseries(model.elo_history, args.figure_path, 'episode', 'elo', 'Elo')
             
