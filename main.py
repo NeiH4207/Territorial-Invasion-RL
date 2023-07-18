@@ -39,7 +39,7 @@ def argument_parser():
     parser.add_argument('--memory-size', type=int, default=32768 * 4)
     parser.add_argument('--num-episodes', type=int, default=100000)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
-    parser.add_argument('--load-model', action='store_true', default=False)
+    parser.add_argument('--load-model', action='store_true', default=True)
     
     return parser.parse_args()
 
@@ -116,20 +116,19 @@ def main():
     for episode in range(args.num_episodes):
         done = False
         state = env.get_state()
-        state = state['observation']
-        
         for cnt in count():
             env.render()
-            valid_actions = env.get_valid_actions()
-            action = algorithm.get_action(state, valid_actions)
+            obs = state['observation']
+            valid_actions = state['valid_actions']
+            action = algorithm.get_action(obs, valid_actions)
             next_state, reward, done = env.step(action)
-            next_state = next_state['observation']
-            state, action, next_state = env.get_symmetry_transition(state, action, next_state)
-            transition = [state, action, reward, next_state, done]
+            next_obs = next_state['observation']
+            obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
+            transition = [obs, action, reward, next_obs, done]
             one_step_transition = algorithm.memory_n.store(*transition)
             if one_step_transition:
                 algorithm.memory.store(*one_step_transition)
-            algorithm.memorize(state, action, reward, next_state, done)
+            algorithm.memorize(obs, action, reward, next_obs, done)
             state = next_state
             if done:
                 break
