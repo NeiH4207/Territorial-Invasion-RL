@@ -144,10 +144,17 @@ class State(Map):
         masked_obs = [(obs[0] != -1) * 1]
         obs = np.concatenate([obs, masked_obs], axis=0)
         agent_current_board[current_agent_coord[0], current_agent_coord[1]] = 1
+        
+        valid_actions = np.zeros(len(self.action_map.values()), dtype=bool)
+        for action in self.action_map.values():
+            if self.is_valid_action(action):
+                valid_actions[action] = True
+        
         return {
             'player-id': self.current_player,
             'observation': obs, 
-            'curr_agent_xy': dcopy(current_agent_coord)
+            'curr_agent_xy': dcopy(current_agent_coord),
+            'valid_actions': valid_actions,
             }
 
     def get_scores(self, player):
