@@ -30,7 +30,7 @@ class AgentFighting(object):
         
     def render(self):
         if self.show_screen:
-            self.screen.load_state(self.state)
+            self.screen.load_state(self.inverse(self.state))
             self.screen.render()
     
     def save_image(self, path):
@@ -49,7 +49,7 @@ class AgentFighting(object):
         self.num_agents = self.state.num_agents
         self.state.make_random_map()
         if self.show_screen:
-            self.screen.init(self.state)
+            self.screen.init(self.inverse(self.state))
         self.num_agents = self.state.num_agents
         state = self.state.get_state()
         return state
@@ -161,6 +161,18 @@ class AgentFighting(object):
     
         return state, action, next_state
     
+    def inverse(self, state):
+        state = dcopy(state)
+        for player_id in range(self.num_players):
+            state.walls[player_id] = state.walls[player_id].T
+            state.agents[player_id] = state.agents[player_id].T
+            state.territories[player_id] = state.territories[player_id].T
+            
+        state.castles = state.castles.T
+        return state
+        
+                
+    
     def get_valid_actions(self, state=None):
         valids = np.zeros(self.n_actions, dtype=bool)
         
@@ -188,7 +200,7 @@ class AgentFighting(object):
         self.state.next(action)
         
         if self.show_screen:
-            self.screen.load_state(self.state)
+            self.screen.load_state(self.inverse(self.state))
             self.screen.render()
             
         new_scores = self.state.scores

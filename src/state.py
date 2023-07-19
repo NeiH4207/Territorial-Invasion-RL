@@ -297,17 +297,16 @@ class State(Map):
     
         elif action_type[0] == 'Change':
             direction = action_type[1]
-            wall_coord = (self.direction_map[direction][0] + current_position[0],
+            next_position = (self.direction_map[direction][0] + current_position[0],
                         self.direction_map[direction][1] + current_position[1])
-            if not self.in_bounds(wall_coord[0], wall_coord[1]):
+            if not self.in_bounds(next_position[0], next_position[1]):
                 valid = False
                 
-            elif self.castles[wall_coord[0]][wall_coord[1]] == 1 \
-                    or self.castles[wall_coord[0]][wall_coord[1]] == 1:
+            elif self.castles[next_position[0]][next_position[1]] == 1:
                 valid = False
                 
-            elif wall_coord in self.agent_coords_in_order[0] or \
-                        wall_coord in self.agent_coords_in_order[1]:
+            elif next_position in self.agent_coords_in_order[0] or \
+                        next_position in self.agent_coords_in_order[1]:
                 valid = False
                 
         return valid
@@ -341,16 +340,16 @@ class State(Map):
             
         elif action_type[0] == 'Change':
             direction = action_type[1]
-            wall_coord = (self.direction_map[direction][0] + current_position[0],
+            next_position = (self.direction_map[direction][0] + current_position[0],
                           self.direction_map[direction][1] + current_position[1])
             if is_valid_action:
-                if self.walls[0][wall_coord[0]][wall_coord[1]] == 0 \
-                            and self.walls[1][wall_coord[0]][wall_coord[1]] == 0:
-                    self.walls[current_player][wall_coord[0]][wall_coord[1]] = 1
+                if self.walls[0][next_position[0]][next_position[1]] == 0 \
+                            and self.walls[1][next_position[0]][next_position[1]] == 0:
+                    self.walls[current_player][next_position[0]][next_position[1]] = 1
                 
                 else:
-                    self.walls[0][wall_coord[0]][wall_coord[1]] = 0
-                    self.walls[1][wall_coord[0]][wall_coord[1]] = 0
+                    self.walls[0][next_position[0]][next_position[1]] = 0
+                    self.walls[1][next_position[0]][next_position[1]] = 0
         else:
             pass
         
