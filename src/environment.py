@@ -28,9 +28,11 @@ class AgentFighting(object):
         self.state = None
         self.reset()
         
-    def render(self):
+    def render(self, state = None):
+        if state is None:
+            state = self.state
         if self.show_screen:
-            self.screen.load_state(self.state)
+            self.screen.load_state(state)
             self.screen.render()
     
     def save_image(self, path):
@@ -161,6 +163,24 @@ class AgentFighting(object):
     
         return state, action, next_state
     
+    def get_symmetric(self, obs, pi):
+        obs = np.array(obs)
+        pi = np.array(pi)
+        sym_obs = []
+        sym_pi = []
+        for k in range(4):
+            _obs = dcopy(obs)
+            for i in range(obs.shape[0]):
+                obs_layer = self.rotate(obs[i], k=k)
+                _obs[i] = obs_layer
+            pi_layer = dcopy(pi)
+            for i in range(k):
+                pi_layer = pi_layer[[2, 3, 1, 0, 6, 4, 7, 5, 10, 11, 9, 8, 12]]
+            sym_obs.append(_obs)
+            sym_pi.append(pi_layer)
+            
+        return sym_obs, sym_pi
+        
     def get_valid_actions(self, state=None):
         valids = np.zeros(self.n_actions, dtype=bool)
         
@@ -188,8 +208,7 @@ class AgentFighting(object):
         self.state.next(action)
         
         if self.show_screen:
-            self.screen.load_state(self.state)
-            self.screen.render()
+            self.render(self.state)
             
         new_scores = self.state.scores
         diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
