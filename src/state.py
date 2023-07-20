@@ -47,6 +47,20 @@ class State(Map):
             'DR': (1, 1)
         }
         
+    def hash_arr(self, arr: np.ndarray):
+        s = ''.join([str(x) for x in arr.flatten()])
+        return s
+        
+    
+    def string_representation(self):
+        """
+        Returns a hash code for string representation of the state
+        """
+        players = [self.current_player, self.current_player ^ 1]
+        s = self.hash_arr(self.agents[players]) + self.hash_arr(self.walls[players]) + \
+            self.hash_arr(self.castles) + self.hash_arr(self.territories[players])
+        return hash(s)    
+    
     def current_position(self):
         return self.agent_coords_in_order[self.current_player][self.agent_current_idx]
         
@@ -75,15 +89,6 @@ class State(Map):
     def get_agent_position(self):
         return self.agent_pos[self.current_player]
     
-    def string_resentation(self):
-        """
-        Returns a hash code for string representation of the state
-        """
-        s = str(self.agent_pos) + \
-            str(self.castles_remaining) + \
-            str(self.territory_board)
-        return hash(s)
-    
     def to_opponent(self):
         state = dcopy(self)
         state.current_player ^= 1
@@ -107,7 +112,8 @@ class State(Map):
 
         return np.array(result)
 
-
+    def terminal(self):
+        return self.remaining_turns == 0
     
     def get_state(self):
         # Standardized variable names to improve readability
@@ -146,7 +152,7 @@ class State(Map):
         agent_current_board[current_agent_coord[0], current_agent_coord[1]] = 1
         
         valid_actions = np.zeros(len(self.action_map.values()), dtype=bool)
-        for action in self.action_map.values():
+        for action in list(self.action_map.values()):
             if self.is_valid_action(action):
                 valid_actions[action] = True
         
@@ -155,6 +161,7 @@ class State(Map):
             'observation': obs, 
             'curr_agent_xy': dcopy(current_agent_coord),
             'valid_actions': valid_actions,
+            'hash_str': self.string_representation(),
             }
 
     def get_scores(self, player):
@@ -309,6 +316,10 @@ class State(Map):
             elif wall_coord in self.agent_coords_in_order[0] or \
                         wall_coord in self.agent_coords_in_order[1]:
                 valid = False
+            elif self.walls[current_player][wall_coord[0]][wall_coord[1]] == 1:
+                valid = False
+        else:
+            valid = False
                 
         return valid
     
