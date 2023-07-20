@@ -29,10 +29,10 @@ class Map(object):
                     self.agent_coords_in_order[1].append((i, j))
     
     def make_random_map(self):
-        self.agents = np.zeros((2, self.height_max, self.width_max))
-        self.walls = np.zeros((2, self.height_max, self.width_max), dtype=int)
-        self.castles = np.zeros((self.height_max, self.width_max))
-        self.territories = np.zeros((2, self.height_max, self.width_max))
+        self.agents = np.zeros((2, self.height_max, self.width_max), dtype=np.int8)
+        self.walls = np.zeros((2, self.height_max, self.width_max), dtype=np.int8)
+        self.castles = np.zeros((self.height_max, self.width_max), dtype=np.int8)
+        self.territories = np.zeros((2, self.height_max, self.width_max), dtype=np.int8)
         
         self.height = random.randint(self.height_min, self.height_max)
         self.width = self.height # random.randint(self.width_min, self.width_max)
@@ -124,8 +124,6 @@ class Map(object):
     def reset(self):
         self.map = np.zeros((2, self.height, self.width))
                               
-    def string_representation(self):
-        return hash(str(self.map))
     
     def flatten(self):
         self.map.reshape(-1, )
