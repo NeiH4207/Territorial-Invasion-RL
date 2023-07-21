@@ -215,9 +215,9 @@ class AgentFighting(object):
         reward = 1 if diff_new_score > 0 else -1
         
         if diff_new_score > diff_previous_scores:
-            reward += 3
+            reward += np.sqrt(diff_new_score - diff_previous_scores)
         elif diff_new_score < diff_previous_scores:
-            reward -= 3
+            reward -= np.sqrt(diff_previous_scores - diff_new_score)
         else:
             reward -= 0.5
         
