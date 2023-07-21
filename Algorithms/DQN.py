@@ -9,6 +9,8 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 import logging
+
+from Algorithms.Minimax import Minimax
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 class Memory(object):
@@ -69,6 +71,7 @@ class DQN():
             'reward': []
         }
         self.counter = 0
+        self.minimax = Minimax(self.target_net, max_depth=200, handicap=2)
         
     def fully_mem(self, perc=1.0):
         return len(self.memory) / (self.memory_size - 1) >= perc
@@ -81,12 +84,16 @@ class DQN():
         
     def get_action(self, state, valid_actions=None):
         state = torch.FloatTensor(np.array(state)).to(self.device)
-        act_values = self.policy_net.predict(state)[0]
+        act_values = self.policy_net.predict(state)
         # set value of invalid actions to -inf
         if valid_actions is not None:
             act_values[~valid_actions] = -float('inf')
         return int(np.argmax(act_values))  # returns action
         
+    def get_opt_action(self, state):
+        action = self.minimax.get_action(state)
+        return action
+    
     def replay(self, batch_size, verbose=False):
 
         if len(self.memory) < batch_size:

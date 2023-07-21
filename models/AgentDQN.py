@@ -154,11 +154,14 @@ class DQN(nn.Module):
         else:
             self.optimizer = optim.AdamW(self.parameters(), lr=lr, amsgrad=True)
     
-    def predict(self, x):	# Chuyển đầu ra x về dạng torch tensor
+    
+    def predict(self, x):
         self.eval()
+        if type(x) == np.ndarray:
+            x = torch.tensor(x, dtype=torch.float32, device=self.get_device())
         x = x.reshape(-1, self.input_shape[0], self.input_shape[1], self.input_shape[2])
         output = self.forward(x).detach()
-        return output.cpu().data.numpy()
+        return output.detach().cpu().numpy()[0]
     
     def set_optimizer(self, optimizer, lr):
         if optimizer == "sgd":

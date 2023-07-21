@@ -47,6 +47,8 @@ class State(Map):
             'DR': (1, 1)
         }
         
+        self.n_actions = len(self.action_map.values())
+        
     def hash_arr(self, arr: np.ndarray):
         s = ''.join([str(x) for x in arr.flatten()])
         return s

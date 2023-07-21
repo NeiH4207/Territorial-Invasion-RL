@@ -31,6 +31,7 @@ def argument_parser():
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--tau', type=int, default=0.01)
     parser.add_argument('--n-step', type=int, default=5)
+    parser.add_argument('--exploit-rate', type=float, default=0.25)
     
     # model training arguments
     parser.add_argument('--lr', type=float, default=2e-6)
@@ -119,8 +120,11 @@ def main():
         for cnt in count():
             env.render()
             obs = state['observation']
-            valid_actions = state['valid_actions']
-            action = algorithm.get_action(obs, valid_actions)
+            if random.random() < args.exploit_rate:
+                action = algorithm.get_opt_action(env.get_state(obj=True))
+            else:
+                valid_actions = state['valid_actions']
+                action = algorithm.get_action(obs, valid_actions)
             next_state, reward, done = env.step(action)
             next_obs = next_state['observation']
             obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
@@ -133,7 +137,7 @@ def main():
             if done:
                 break
             
-        if episode % 10 == 0:
+        if episode % 10 == 0 and algorithm.fully_mem(0.5):
             history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
             plot_timeseries(history_loss, args.figure_path, 'episode', 'loss', 'Training Loss')
         

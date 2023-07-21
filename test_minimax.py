@@ -20,7 +20,7 @@ def argument_parser():
     parser = ArgumentParser()
     parser.add_argument('--show-screen', type=bool, default=True)
     parser.add_argument('--render', type=bool, default=True)
-    parser.add_argument('--model-path', type=str, default='trained_models/nnet2.pt')
+    parser.add_argument('--model-path', type=str, default='trained_models/nnet3.pt')
     parser.add_argument('--device', type=str, default='cuda')
     return parser.parse_args()
 
@@ -32,18 +32,19 @@ def main():
     n_actions = env.n_actions
     
     device = 'cuda' if torch.cuda.is_available() and args.device == 'cuda' else 'cpu'
-    # model = DQN(n_observations, n_actions).to(device)
-    # model.load(args.model_path)
+    model = DQN(n_observations, n_actions).to(device)
+    model.load(args.model_path)
     
-    algorithm = Minimax(env, max_depth=7)
-    env.reset()
+    algorithm = Minimax(model, max_depth=200, handicap=2)
+    
     if args.show_screen:
         env.render()
+    env.save_image('figures/minimax.png')
     state = env.get_state(obj=True)
     while not env.is_terminal():
         action = algorithm.get_action(state)
         _ = env.step(action, verbose=True)
-        env.render()
+        env.save_image('figures/minimax.png')
         state = env.get_state(obj=True)
     
     winner = env.get_winner()
