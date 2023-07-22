@@ -24,8 +24,8 @@ def argument_parser():
     parser.add_argument('--figure-path', type=str, default='figures/')
     parser.add_argument('--n-evals', type=int, default=5)
     
-    parser.add_argument('--model-path-1', type=str, default='trained_models/nnet_best.pt')
-    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet_best.pt')
+    parser.add_argument('--model-path-1', type=str, default='trained_models/nnet2.pt')
+    parser.add_argument('--model-path-2', type=str, default='trained_models/nnet2.pt')
     parser.add_argument('--load-model', action='store_true', default=True)
     parser.add_argument('--device', type=str, default='cpu')
     return parser.parse_args()
