@@ -224,7 +224,7 @@ class AgentFighting(object):
         self.state.next(action)
         
         if self.show_screen:
-            if self.state.agent_current_idx == self.state.num_agents - 1:
+            if self.state.agent_current_idx == 0:
                 self.render(self.state)
             # self.render(self.state)
             

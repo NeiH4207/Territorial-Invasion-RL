@@ -1,13 +1,14 @@
 {
     "map":{
-        "height-min": 13,
+        "height-min": 25,
         "height-max": 25,
-        "width-min": 13,
+        "width-min": 25,
         "width-max": 25,
-        "min-num-agents": 2,
+        "min-num-agents": 5,
         "max-num-agents": 5,
-        "min-num-turns": 60,
+        "min-num-turns": 100,
         "max-num-turns": 100,
-        "num-castles": 20
+        "num-castles": 30,
+        "num-ponds": 30
     }
 }
