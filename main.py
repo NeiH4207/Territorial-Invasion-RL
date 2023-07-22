@@ -120,10 +120,10 @@ def main():
         for cnt in count():
             env.render()
             obs = state['observation']
-            if random.random() < args.exploit_rate:
-                action = algorithm.get_opt_action(env.get_state(obj=True))
+            valid_actions = state['valid_actions']
+            if env.is_visited_multiple_times(obs):
+                action = algorithm.get_action(obs, valid_actions, 0.25)
             else:
-                valid_actions = state['valid_actions']
                 action = algorithm.get_action(obs, valid_actions)
             next_state, reward, done = env.step(action)
             next_obs = next_state['observation']

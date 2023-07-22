@@ -26,6 +26,7 @@ class AgentFighting(object):
         self.players = [Player(i, self.num_players) for i in range(self.num_players)]
         self.current_player = 0
         self.state = None
+        self.s_counter = {}
         self.reset()
         
     def render(self, state = None):
@@ -70,6 +71,21 @@ class AgentFighting(object):
             return dcopy(self.state)
         else:
             return self.state.get_state()
+        
+        
+    def hash_arr(self, arr: np.ndarray):
+        s = ''.join([str(x) for x in arr.flatten()])
+        return s
+    
+    def obs_string_representation(self, obs):
+        """
+        Returns a hash code for string representation of the state
+        """
+        s = self.hash_arr(obs)
+        return hash(s)
+    
+    def is_visited_multiple_times(self, obs):
+        return self.s_counter.get(self.obs_string_representation(obs), 0) > 1
     
     def is_terminal(self):
         """
@@ -208,7 +224,9 @@ class AgentFighting(object):
         self.state.next(action)
         
         if self.show_screen:
-            self.render(self.state)
+            if self.state.agent_current_idx == self.state.num_agents - 1:
+                self.render(self.state)
+            # self.render(self.state)
             
         new_scores = self.state.scores
         diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
@@ -221,4 +239,9 @@ class AgentFighting(object):
         else:
             reward -= 0.5
         
-        return self.get_state(), reward, self.is_terminal()
+        next_state = self.state.get_state()
+        _s_present = self.obs_string_representation(next_state['observation'])
+        self.s_counter[_s_present] = \
+            self.s_counter.get(_s_present, 0) + 1
+        
+        return next_state, reward, self.is_terminal()

@@ -82,13 +82,21 @@ class DQN():
     def memorize(self, state, action, reward, next_state, done):
         self.memory.store(state, action, reward, next_state, done)
         
-    def get_action(self, state, valid_actions=None):
+    def get_action(self, state, valid_actions=None, epsilon=None):
         state = torch.FloatTensor(np.array(state)).to(self.device)
         act_values = self.policy_net.predict(state)
         # set value of invalid actions to -inf
         if valid_actions is not None:
             act_values[~valid_actions] = -float('inf')
-        return int(np.argmax(act_values))  # returns action
+        if epsilon is None:
+            return int(np.argmax(act_values))  # returns action
+        else:
+            if np.random.rand() <= epsilon:
+                if sum(valid_actions) == 0:
+                    return self.n_actions - 1
+                return np.random.choice(np.arange(self.n_actions)[valid_actions])
+            else:
+                return int(np.argmax(act_values))
         
     def get_opt_action(self, state):
         action = self.minimax.get_action(state)
