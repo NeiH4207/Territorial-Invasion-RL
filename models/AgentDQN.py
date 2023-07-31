@@ -163,6 +163,15 @@ class DQN(nn.Module):
         output = self.forward(x).detach()
         return output.detach().cpu().numpy()[0]
     
+    def predict_probs(self, x):
+        output = self.predict(x)
+        # minmax scaling
+        output = (output - np.min(output)) / (np.max(output) - np.min(output))
+        output = output ** 4
+        # softmax
+        output = np.exp(output) / np.sum(np.exp(output))
+        return output
+    
     def set_optimizer(self, optimizer, lr):
         if optimizer == "sgd":
             self.optimizer = optim.SGD(self.parameters(), lr=lr)		# Tối ưu theo gradient descent thuần túy

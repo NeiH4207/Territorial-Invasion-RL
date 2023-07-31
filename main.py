@@ -39,7 +39,7 @@ def argument_parser():
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=32768 * 4)
     parser.add_argument('--num-episodes', type=int, default=100000)
-    parser.add_argument('--model-path', type=str, default='trained_models/nnet.pt')
+    parser.add_argument('--model-path', type=str, default='trained_models/procon.pt')
     parser.add_argument('--load-model', action='store_true', default=True)
     
     return parser.parse_args()
@@ -121,10 +121,11 @@ def main():
             env.render()
             obs = state['observation']
             valid_actions = state['valid_actions']
-            if env.is_visited_multiple_times(obs):
-                action = algorithm.get_action(obs, valid_actions, 0.25)
-            else:
-                action = algorithm.get_action(obs, valid_actions)
+            act_values = model.predict_probs(obs) ** 4
+            if valid_actions is not None:
+                act_values[~valid_actions] = 0
+            act_values = act_values / np.sum(act_values)
+            action = np.random.choice(np.arange(env.n_actions), p=act_values)
             next_state, reward, done = env.step(action)
             next_obs = next_state['observation']
             obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
