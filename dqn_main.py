@@ -55,9 +55,9 @@ def main():
         n_actions, 
         optimizer=args.optimizer, 
         lr=args.lr,
-        atom_size=51, 
-        v_min=-1000,
-        v_max=1000,
+        atom_size=configs['atom_size'], 
+        v_min=configs['v_min'],
+        v_max=configs['v_max'],
     ).to(device)
     
     if args.load_model:
@@ -86,8 +86,9 @@ def main():
                         beta=0.6,
                         prior_eps=1e-6,
                         n_step=args.n_step,
-                        v_min=-1000,
-                        v_max=1000,
+                        atom_size=configs['atom_size'], 
+                        v_min=configs['v_min'],
+                        v_max=configs['v_max'],
                     )
     
     best_model_path = args.model_path.replace('.pt', '_best.pt')
