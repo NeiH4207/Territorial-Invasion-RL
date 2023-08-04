@@ -117,3 +117,14 @@ def plot_timeseries(history, save_dir, x_label, y_label, title):
     save_path = os.path.join(save_dir, title + '.png')
     plt.savefig(save_path)
     plt.close()
+    
+def plot_timeseries(history, save_dir, x_label, y_label, title):
+    fig, ax = plt.subplots()
+    ax.plot(history)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_title(title)
+    ax.grid(True)
+    save_path = os.path.join(save_dir, title + '.png')
+    plt.savefig(save_path)
+    plt.close()

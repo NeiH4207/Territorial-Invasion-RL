@@ -6,14 +6,14 @@ from __future__ import division
 from itertools import count
 import logging
 import os
-import time
 import torch
 from tqdm import tqdm
-from src.utils import *
+from utils import *
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
-from Algorithms.Rainbow import Rainbow
-from models.GYM.GymDQN import GymDQN
+
+from algorithms.Rainbow import Rainbow
+from models.GYM.GymDQN import CartPole
 import gym
 
 def argument_parser():
@@ -25,15 +25,19 @@ def argument_parser():
     
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
-    parser.add_argument('--tau', type=int, default=0.01)
+    parser.add_argument('--tau', type=float, default=0.01)
+    parser.add_argument('--alpha', type=float, default=0.2)
+    parser.add_argument('--beta', type=float, default=0.6)
+    parser.add_argument('--prior_eps', type=float, default=1e-6)
+    
     parser.add_argument('--n-step', type=int, default=3)
     
     # model training arguments
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--optimizer', type=str, default='adamw')
-    parser.add_argument('--memory-size', type=int, default=4096)
-    parser.add_argument('--num-episodes', type=int, default=2000)
+    parser.add_argument('--memory-size', type=int, default=8192)
+    parser.add_argument('--num-episodes', type=int, default=1000)
     parser.add_argument('--model-path', type=str, default='tmp/model.pt')
     parser.add_argument('--load-model', action='store_true')
     
@@ -51,26 +55,34 @@ def main():
     algorithm = None
     set_seed(1)
     
-    model = GymDQN(
+    model = CartPole(
         n_observations=n_observations,
         n_actions=n_actions,
+        atom_size=51, 
+        v_min=0,
+        v_max=500,
         optimizer=args.optimizer,
         lr=args.lr,
-    ).to(device)
+        device=device
+    )
+    model = model.to(device)
     
     algorithm = Rainbow(   
-                    n_observations=n_observations, 
-                    n_actions=n_actions,
-                    model=model,
-                    tau=args.tau,
-                    gamma=args.gamma,
-                    memory_size=args.memory_size,
-                    model_path=args.model_path,
-                    batch_size=args.batch_size,
-                    alpha=0.2,
-                    beta=0.6,
-                    prior_eps=1e-6,
-                    n_step=args.n_step)
+        n_observations=n_observations, 
+        n_actions=n_actions,
+        model=model,
+        tau=args.tau,
+        gamma=args.gamma,
+        memory_size=args.memory_size,
+        model_path=args.model_path,
+        batch_size=args.batch_size,
+        alpha=args.alpha,
+        beta=args.beta,
+        prior_eps=args.prior_eps,
+        n_step=args.n_step,
+        v_min=0,
+        v_max=500
+    )
         
     if args.model_path:
         model_dir = os.path.dirname(args.model_path)
@@ -112,7 +124,7 @@ def main():
             history_loss = algorithm.replay(args.batch_size)
             plot_timeseries(history_loss, args.figure_path, 'episode', 'loss', 'Training Loss')
             plot_timeseries(timesteps, args.figure_path, 'episode', 'timesteps', 'Training Timesteps')
-            if cnt >= max(timesteps):
+            if timesteps[-1] >= max(timesteps[:-1]):
                 algorithm.save_model()
                 
     if args.render_last:

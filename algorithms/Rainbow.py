@@ -8,7 +8,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from Algorithms.DQN import DQN
+from algorithms.DQN import DQN
 from src.priority import PrioritizedReplayBuffer, ReplayBuffer
 
 class Rainbow(DQN):
@@ -33,6 +33,10 @@ class Rainbow(DQN):
         prior_eps: float = 1e-6,
         # N-step Learning
         n_step: int = 3,
+        # Categorical DQN parameters
+        v_min: float = 0.0,
+        v_max: float = 500.0,
+        atom_size: int = 51,
         ):
 
         super().__init__(n_observations, n_actions, model, tau, 
@@ -44,6 +48,10 @@ class Rainbow(DQN):
         self.beta = beta
         self.prior_eps = prior_eps
         self.n_step = n_step
+        self.v_min = v_min
+        self.v_max = v_max
+        self.atom_size = atom_size
+        self.support = torch.linspace(v_min, v_max, atom_size).to(self.device)
         self.transition = list()
         self.memory_n = ReplayBuffer(
                 n_observations, memory_size, batch_size, n_step=n_step, gamma=gamma
@@ -51,6 +59,13 @@ class Rainbow(DQN):
     
     def reset_memory(self):        
         self.memory.size = 0
+        
+    def get_action(self, state, valid_actions=None):
+        state = torch.FloatTensor(np.array(state)).to(self.device)
+        act_values = self.policy_net.predict(state)[0]
+        if valid_actions is not None:
+            act_values[~valid_actions] = -float('inf')
+        return int(np.argmax(act_values))  # returns action
         
     def calculate_dqn_loss(
         self, 
@@ -63,20 +78,41 @@ class Rainbow(DQN):
             reward_batch = Variable(torch.FloatTensor(samples['rews'])).to(self.device)
             done_batch = Variable(torch.FloatTensor(samples['done'])).to(self.device)
             
-            next_state_values = torch.zeros(samples['next_obs'].shape[0], device=self.device)
-            with torch.no_grad():
-                next_action_batch = self.policy_net(next_state_batch).max(1)[1]
-                next_state_values = self.target_net(next_state_batch)
-                next_state_values = next_state_values.gather(1, next_action_batch.reshape(-1, 1)).squeeze()
-                
-            expected_state_action_values = (1 - done_batch) * (next_state_values * gamma) + reward_batch
-
-            state_action_values = self.policy_net(state_batch).gather(1, action_batch.reshape(-1, 1))
+            delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
+            batch_size = state_batch.size(0)
             
-            # Compute Huber loss
-            elementwise_loss = F.smooth_l1_loss(state_action_values, 
-                                                expected_state_action_values.unsqueeze(1), 
-                                                reduction="none")
+            with torch.no_grad():
+                next_action_batch = self.policy_net(next_state_batch).argmax(1)
+                next_dist = self.target_net.dist(next_state_batch)
+                next_dist = next_dist[range(batch_size), next_action_batch]
+            
+                t_z = reward_batch.reshape(-1, 1) + (1 - done_batch).reshape(-1, 1) * gamma \
+                    * self.policy_net.support
+                t_z = t_z.clamp(min=self.v_min, max=self.v_max)
+                b = (t_z - self.v_min) / delta_z
+                l = b.floor().long()
+                u = b.ceil().long()
+
+                offset = (
+                    torch.linspace(
+                        0, (batch_size - 1) * self.atom_size, batch_size
+                    ).long()
+                    .unsqueeze(1)
+                    .expand(batch_size, self.atom_size)
+                    .to(self.device)
+                )
+
+                proj_dist = torch.zeros(next_dist.size(), device=self.device)
+                proj_dist.view(-1).index_add_(
+                    0, (l + offset).view(-1), (next_dist * (u.float() - b)).view(-1)
+                )
+                proj_dist.view(-1).index_add_(
+                    0, (u + offset).view(-1), (next_dist * (b - l.float())).view(-1)
+                )
+
+            dist = self.policy_net.dist(state_batch)
+            log_p = torch.log(dist[range(batch_size), action_batch])
+            elementwise_loss = -(proj_dist * log_p).sum(1)
             return elementwise_loss
     
     def replay(self, batch_size, verbose=False):
@@ -113,8 +149,6 @@ class Rainbow(DQN):
             new_priorities = loss_for_prior + self.prior_eps
             self.memory.update_priorities(samples['indices'], new_priorities)
             
-            self.policy_net.reset_noise()
-            self.target_net.reset_noise()
             self.soft_update()
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)

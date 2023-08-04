@@ -352,30 +352,32 @@ class State(Map):
         agent_coords_in_order = self.agent_coords_in_order
         current_position = agent_coords_in_order[current_player][agent_current_idx]
         
-        if action_type[0] == 'Move':
-            direction = action_type[1]
-            next_position = (self.direction_map[direction][0] + current_position[0],
-                          self.direction_map[direction][1] + current_position[1])
-            
-            self.agents[current_player][next_position[0]][next_position[1]] = 1
-            self.agents[current_player][current_position[0]][current_position[1]] = 0
-            
-        elif action_type[0] == 'Change':
-            direction = action_type[1]
-            next_position = (self.direction_map[direction][0] + current_position[0],
-                          self.direction_map[direction][1] + current_position[1])
-            
-            if self.walls[0][next_position[0]][next_position[1]] == 0 \
-                        and self.walls[1][next_position[0]][next_position[1]] == 0:
-                self.walls[current_player][next_position[0]][next_position[1]] = 1
-            
-            else:
-                self.walls[0][next_position[0]][next_position[1]] = 0
-                self.walls[1][next_position[0]][next_position[1]] = 0
-        else:
-            pass
+        is_valid = self.is_valid_action(action, drop_self=True)
         
-        self.update_score()
+        if is_valid:
+            if action_type[0] == 'Move':
+                direction = action_type[1]
+                next_position = (self.direction_map[direction][0] + current_position[0],
+                            self.direction_map[direction][1] + current_position[1])
+                
+                self.agents[current_player][next_position[0]][next_position[1]] = 1
+                self.agents[current_player][current_position[0]][current_position[1]] = 0
+                
+            elif action_type[0] == 'Change':
+                direction = action_type[1]
+                wall_coord = (self.direction_map[direction][0] + current_position[0],
+                            self.direction_map[direction][1] + current_position[1])
+                if self.walls[0][wall_coord[0]][wall_coord[1]] == 0 \
+                            and self.walls[1][wall_coord[0]][wall_coord[1]] == 0:
+                    self.walls[current_player][wall_coord[0]][wall_coord[1]] = 1
+                
+                else:
+                    self.walls[0][wall_coord[0]][wall_coord[1]] = 0
+                    self.walls[1][wall_coord[0]][wall_coord[1]] = 0
+            else:
+                pass
+            
+            self.update_score()
             
         self.agent_current_idx = (agent_current_idx + 1) % self.num_agents
         if self.agent_current_idx == 0:
@@ -383,3 +385,5 @@ class State(Map):
             self.update_agent_coords_in_order()
             if self.current_player == 0:
                 self.remaining_turns -= 1
+                
+        return is_valid

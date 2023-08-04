@@ -8,7 +8,7 @@ import logging
 from matplotlib import pyplot as plt
 import torch
 from src.evaluator import Evaluator
-from models.AgentDQN import DQN
+from models.RainbowNet import DQN
 from src.environment import AgentFighting
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser

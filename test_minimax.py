@@ -8,9 +8,9 @@ import logging
 import time
 
 import torch
-from Algorithms.RandomStep import RandomStep
-from Algorithms.Minimax import Minimax
-from models.AgentDQN import DQN
+from algorithms.RandomStep import RandomStep
+from algorithms.Minimax import Minimax
+from models.RainbowNet import DQN
 from src.environment import AgentFighting
 log = logging.getLogger(__name__)
 from random import seed
