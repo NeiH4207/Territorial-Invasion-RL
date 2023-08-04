@@ -8,7 +8,7 @@ import logging
 import os
 import torch
 from tqdm import tqdm
-from utils import *
+from src.utils import *
 log = logging.getLogger(__name__)
 from argparse import ArgumentParser
 
@@ -109,11 +109,12 @@ def main():
             env.render()
             action = algorithm.get_action(state)
             next_state, reward, done, truncated, _ = env.step(action)
-            transition = [state, action, reward, next_state, done]
-            one_step_transition = algorithm.memory_n.store(*transition)
-            if one_step_transition:
-                algorithm.memory.store(*one_step_transition)
-            algorithm.memorize(state, action, reward, next_state, done)
+            if not truncated:
+                transition = [state, action, reward, next_state, done]
+                one_step_transition = algorithm.memory_n.store(*transition)
+                if one_step_transition:
+                    algorithm.memory.store(*one_step_transition)
+                algorithm.memorize(state, action, reward, next_state, done)
             state = next_state
             if done or truncated:
                 break

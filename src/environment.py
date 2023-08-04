@@ -226,18 +226,17 @@ class AgentFighting(object):
         if self.show_screen:
             if self.state.agent_current_idx == 0:
                 self.render(self.state)
-            # self.render(self.state)
             
         new_scores = self.state.scores
         diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
-        reward = 1 if diff_new_score > 0 else -1
+        reward = 0.5 if diff_new_score > 0 else -0.5
         
         if diff_new_score > diff_previous_scores:
-            reward += np.sqrt(diff_new_score - diff_previous_scores)
+            reward += diff_new_score - diff_previous_scores
         elif diff_new_score < diff_previous_scores:
-            reward -= np.sqrt(diff_previous_scores - diff_new_score)
+            reward -= diff_previous_scores - diff_new_score
         else:
-            reward -= 0.5
+            reward -= 0.25
         
         next_state = self.state.get_state()
         _s_present = self.obs_string_representation(next_state['observation'])
