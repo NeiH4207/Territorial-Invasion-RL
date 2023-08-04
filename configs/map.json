@@ -10,5 +10,8 @@
         "max-num-turns": 100,
         "num-castles": 30,
         "num-ponds": 30
-    }
+    },
+    "v_max": 1000,
+    "v_min": -1000,
+    "atom_size": 51
 }

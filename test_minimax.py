@@ -10,7 +10,7 @@ import time
 import torch
 from algorithms.RandomStep import RandomStep
 from algorithms.Minimax import Minimax
-from models.RainbowNet import DQN
+from models.RainbowNet import RainbowNet
 from src.environment import AgentFighting
 log = logging.getLogger(__name__)
 from random import seed
@@ -32,10 +32,18 @@ def main():
     n_actions = env.n_actions
     
     device = 'cuda' if torch.cuda.is_available() and args.device == 'cuda' else 'cpu'
-    model = DQN(n_observations, n_actions).to(device)
-    model.load(args.model_path)
+    model = RainbowNet(
+        n_observations, 
+        n_actions, 
+        v_min=configs['v_min'],
+        v_max=configs['v_max'],
+        atom_size=configs['atom_size'],
+        device=device
+    ).to(device)
     
-    algorithm = Minimax(model, max_depth=200, handicap=2)
+    # model.load(args.model_path)
+    
+    algorithm = Minimax(env, model, max_depth=2, handicap=2)
     
     if args.show_screen:
         env.render()

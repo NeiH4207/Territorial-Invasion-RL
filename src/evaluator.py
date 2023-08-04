@@ -54,14 +54,14 @@ class Evaluator():
                 if state['player-id'] == 0:
                     valid_actions = state['valid_actions']
                     torch_state = torch.FloatTensor(state['observation']).to(self.device)
-                    act_values = new_model.predict(torch_state)
+                    act_values = new_model.predict(torch_state)[0]
                     if valid_actions is not None:
                         act_values[~valid_actions] = -float('inf')
                     action = int(np.argmax(act_values))
                 else:
                     valid_actions = state['valid_actions']
                     torch_state = torch.FloatTensor(state['observation']).to(self.device)
-                    act_values = old_model.predict(torch_state)
+                    act_values = old_model.predict(torch_state)[0]
                     if valid_actions is not None:
                         act_values[~valid_actions] = -float('inf')
                     action = int(np.argmax(act_values))
