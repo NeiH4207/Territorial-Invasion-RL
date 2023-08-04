@@ -45,6 +45,7 @@ class Evaluator():
         elo_2 = new_model.get_elo()
         old_elo = elo_2
         num_wins = 0
+        total_scores = [0, 0]
         
         _tqdm = tqdm(range(self.n_evals), desc='Evaluating (Win 0/{})'.format(self.n_evals))
         for i in _tqdm:
@@ -66,23 +67,28 @@ class Evaluator():
                         act_values[~valid_actions] = -float('inf')
                     action = int(np.argmax(act_values))
                 scores = self.env.state.scores
-                _tqdm.set_postfix_str(f'Scores: {scores[0]} / {scores[1]}')
                 next_state, _, done = self.env.step(action)
                 state = next_state
                 if done:
                     break
-            winner = self.env.get_winner()
-            if winner == 0:
+            scores = self.env.state.scores
+            _tqdm.set_postfix_str(f'Scores: {scores[0]} / {scores[1]}')
+            total_scores[0] += scores[0]
+            total_scores[1] += scores[1]
+            if scores[0] > scores[1]:
                 num_wins += 1
-            if winner == -1:
-                score = 0.5
-            else:
-                score = winner
-            _tqdm.set_description(f'Evaluating (Win {num_wins}/{self.n_evals})')
-            elo_1, elo_2 = self.compute_elo(elo_1, elo_2, score)
             if i < self.n_evals - 1:
                 self.env.reset()
+            _tqdm.set_description(f'Evaluating (Win {num_wins}/{self.n_evals})')
         
+        if total_scores[0] > total_scores[1]:
+            score = 1
+        if total_scores[0] == total_scores[1]:
+            score = 0.5
+        else:
+            score = 0
+            
+        elo_1, elo_2 = self.compute_elo(elo_1, elo_2, score)
         if change_elo:
             old_model.set_elo(elo_1)
             new_model.set_elo(elo_2)
@@ -91,7 +97,7 @@ class Evaluator():
         else:
             won_player = 1 if num_wins <= self.n_evals - num_wins else 2
             num_wins = num_wins if won_player == 2 else self.n_evals - num_wins
-        return num_wins / self.n_evals >= 0.55
+        return num_wins / self.n_evals >= 0.55 or total_scores[0] > total_scores[1]
     
     
     def eval_pg(self, old_model, new_model, change_elo=True):
