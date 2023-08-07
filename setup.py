@@ -5,6 +5,9 @@ setup(
        version='0.1',
        packages=find_packages(),
        install_requires=[
+           'pip<=23.0.1',
+           'setuptools<=66',
+           'wheel<=0.38.4'
        ],
        entry_points={
            'console_scripts': [

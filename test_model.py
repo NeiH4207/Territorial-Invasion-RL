@@ -34,11 +34,11 @@ def main():
     args = argument_parser()
     configs = json.load(open('configs/map.json'))
     env = AgentFighting(args, configs, args.show_screen)
-    n_observations = env.get_space_size()
+    observation_shape = env.get_space_size()
     n_actions = env.n_actions
     device = 'cuda' if torch.cuda.is_available() and args.device == 'cuda' else 'cpu'
     model_1 = RainbowNet(
-        n_observations, 
+        observation_shape, 
         n_actions, 
         v_min=configs['v_min'],
         v_max=configs['v_max'],
@@ -46,7 +46,7 @@ def main():
         device=device
     ).to(device)
     model_2 = RainbowNet(
-        n_observations, 
+        observation_shape, 
         n_actions, 
         v_min=configs['v_min'],
         v_max=configs['v_max'],

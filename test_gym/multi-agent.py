@@ -1,8 +1,11 @@
+import time
+import gym
+
+from models.GYM.GymDQN import CartPole
 """
 Created on Tue Apr 27 2:19:47 2023
 @author: hien
 """
-from __future__ import division
 from itertools import count
 import logging
 import os
@@ -13,13 +16,13 @@ log = logging.getLogger(__name__)
 from argparse import ArgumentParser
 
 from algorithms.Rainbow import Rainbow
-from models.GYM.GymDQN import CartPole
+from models.RainbowNet import RainbowNet
 import gym
 
 def argument_parser():
     parser = ArgumentParser()
     # Game options
-    parser.add_argument('--show-screen', type=bool)
+    parser.add_argument('--show-screen', type=bool, default=True)
     parser.add_argument('--render-last', type=bool, default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
     
@@ -33,7 +36,7 @@ def argument_parser():
     parser.add_argument('--n-step', type=int, default=3)
     
     # model training arguments
-    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=8192)
@@ -46,11 +49,13 @@ def argument_parser():
 def main():
     args = argument_parser()
     if args.show_screen:
-        env = gym.make('CartPole-v1', render_mode='human')
+        mode = 'human'
     else:
-        env = gym.make('CartPole-v1')
+        mode = 'rgb_array'
         
-    observation_shape, n_actions = env.observation_space.shape[0], env.action_space.n
+    env = gym.make('ma_gym:Combat-v0')
+    n_actions = env.action_space[0].n
+    observation_shape = env._grid_shape[0] * 10
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     algorithm = None
     set_seed(1)
@@ -59,12 +64,13 @@ def main():
         observation_shape=observation_shape,
         n_actions=n_actions,
         atom_size=51, 
-        v_min=0,
-        v_max=500,
+        v_min=-20,
+        v_max=20,
         optimizer=args.optimizer,
         lr=args.lr,
         device=device
     )
+    
     model = model.to(device)
     
     algorithm = Rainbow(   
@@ -83,7 +89,7 @@ def main():
         v_min=0,
         v_max=500
     )
-        
+    algorithm.set_multi_agent_env(1, env.n_agents)
     if args.model_path:
         model_dir = os.path.dirname(args.model_path)
         if not os.path.exists(model_dir):
@@ -97,40 +103,42 @@ def main():
     if not os.path.exists(args.figure_path):
         os.makedirs(args.figure_path)
         
-    print("History and timesteps saved at {}".format(args.figure_path))
+    print("History and ep_rewards saved at {}".format(args.figure_path))
         
-    timesteps = []
-        
+    ep_rewards = []
+    
     for episode in tqdm(range(args.num_episodes)):
-        done = False
-        state, info = env.reset()
+        obs_n = env.reset()
+        env.render()
         cnt = 0
-        for cnt in count():
+        done_n = [False for _ in range(env.n_agents)]
+        ep_reward = 0
+        while not all(done_n):
+            actions = [algorithm.get_action(obs_i) for obs_i in obs_n]
+            next_obs_n, reward_n, done_n, info = env.step(actions)
             env.render()
-            action = algorithm.get_action(state)
-            next_state, reward, done, truncated, _ = env.step(action)
-            if not truncated:
+            ep_reward += sum(reward_n)
+            for state, action, reward, next_state, done in zip(obs_n, actions, reward_n, obs_n, done_n):
+                # reward = np.mean(reward_n) * 0.5 + reward * 0.5
                 transition = [state, action, reward, next_state, done]
                 one_step_transition = algorithm.memory_n.store(*transition)
                 if one_step_transition:
                     algorithm.memory.store(*one_step_transition)
                 algorithm.memorize(state, action, reward, next_state, done)
-            state = next_state
-            if done or truncated:
-                break
+            obs_n = next_obs_n
         
-        timesteps.append(cnt)
+        ep_rewards.append(ep_reward)
         
         if episode % 3 == 0 and algorithm.fully_mem(0.25):
             history_loss = algorithm.replay(args.batch_size)
             plot_timeseries(history_loss, args.figure_path, 'episode', 'loss', 'Training Loss')
-            plot_timeseries(timesteps, args.figure_path, 'episode', 'timesteps', 'Training Timesteps')
-            if timesteps[-1] >= max(timesteps[:-1]):
+            plot_timeseries(ep_rewards, args.figure_path, 'episode', 'ep_rewards', 'Training ep_rewards')
+            if ep_rewards[-1] >= max(ep_rewards[:-1]):
                 algorithm.save_model()
                 
     if args.render_last:
         algorithm.load_model(args.model_path, device)
-        env = gym.make('CartPole-v1', render_mode='human')
+        env = gym.make('ma_gym:Combat-v0')
         
         done = False
         state, info = env.reset()

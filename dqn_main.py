@@ -11,12 +11,12 @@ import os
 import time
 import torch
 from tqdm import tqdm
-from algorithms.Rainbow import Rainbow
 from src.evaluator import Evaluator
 from src.environment import AgentFighting
 from src.utils import *
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 from argparse import ArgumentParser
+from algorithms.Rainbow import Rainbow
 from models.RainbowNet import RainbowNet
 
 def argument_parser():
@@ -46,12 +46,12 @@ def main():
     args = argument_parser()
     configs = json.load(open('configs/map.json'))
     env = AgentFighting(args, configs, args.show_screen)
-    n_observations = env.get_space_size()
+    observation_shape = env.get_space_size()
     n_actions = env.n_actions
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
     model = RainbowNet(
-        n_observations, 
+        observation_shape, 
         n_actions, 
         optimizer=args.optimizer, 
         lr=args.lr,
@@ -74,7 +74,7 @@ def main():
         os.makedirs(args.figure_path)
         logging.info('Created figure directory: {}'.format(args.figure_path))
         
-    algorithm = Rainbow(n_observations=n_observations, 
+    algorithm = Rainbow(observation_shape=observation_shape, 
                         n_actions=n_actions,
                         model=model,
                         tau=args.tau,
