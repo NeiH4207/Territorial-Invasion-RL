@@ -51,6 +51,9 @@ class Rainbow(DQN):
         self.v_min = v_min
         self.v_max = v_max
         self.atom_size = atom_size
+        self.batch_size = batch_size
+        self.gamma = gamma
+        self.n_step = n_step
         self.support = torch.linspace(v_min, v_max, atom_size).to(self.device)
         self.transition = list()
         self.memory_n = ReplayBuffer(
@@ -59,6 +62,17 @@ class Rainbow(DQN):
     
     def reset_memory(self):        
         self.memory.size = 0
+        
+    def set_multi_agent_env(self, num_players, num_agents):
+        self.num_players = num_players
+        self.num_agents = num_agents
+        self.memory_n = ReplayBuffer(
+            self.n_observations, 
+            self.memory_size, 
+            self.batch_size, 
+            n_step=self.n_step * num_players * num_agents + 1, 
+            gamma=self.gamma
+        )
         
     def get_action(self, state, valid_actions=None):
         state = torch.FloatTensor(np.array(state)).to(self.device)

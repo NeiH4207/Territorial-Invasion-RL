@@ -10,6 +10,7 @@ import logging
 import os
 import time
 import torch
+from tqdm import tqdm
 from algorithms.Rainbow import Rainbow
 from src.evaluator import Evaluator
 from src.environment import AgentFighting
@@ -20,24 +21,23 @@ from models.RainbowNet import RainbowNet
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=True)
+    parser.add_argument('--show-screen', type=bool, default=False)
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
     parser.add_argument('--n-evals', type=int, default=50)
     
     # DDQN arguments
-    parser.add_argument('--gamma', type=float, default=0.975)
+    parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--tau', type=int, default=0.01)
     parser.add_argument('--n-step', type=int, default=5)
-    parser.add_argument('--exploit-rate', type=float, default=0.25)
     
     # model training arguments
-    parser.add_argument('--lr', type=float, default=2e-6)
+    parser.add_argument('--lr', type=float, default=1e-6)
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--optimizer', type=str, default='adamw')
-    parser.add_argument('--memory-size', type=int, default=32768 * 4)
+    parser.add_argument('--memory-size', type=int, default=32768 * 2)
     parser.add_argument('--num-episodes', type=int, default=100000)
-    parser.add_argument('--model-path', type=str, default='trained_models/procon_best.pt')
+    parser.add_argument('--model-path', type=str, default='trained_models/model.pt')
     parser.add_argument('--load-model', action='store_true', default=False)
     
     return parser.parse_args()
@@ -91,35 +91,40 @@ def main():
                         v_max=configs['v_max'],
                     )
     
+    algorithm.set_multi_agent_env(num_players=env.num_players, num_agents=env.num_agents)
+    
     best_model_path = args.model_path.replace('.pt', '_best.pt')
-    # model.save(best_model_path)
+    model.save(best_model_path)
     best_model = deepcopy(model)
     
     for episode in range(args.num_episodes):
-        done = False
-        state = env.get_state()
-        for cnt in count():
-            env.render()
-            obs = state['observation']
-            valid_actions = state['valid_actions']
-            action = algorithm.get_action(obs, valid_actions)
-            next_state, reward, done = env.step(action)
-            next_obs = next_state['observation']
-            obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
-            transition = [obs, action, reward, next_obs, done]
-            one_step_transition = algorithm.memory_n.store(*transition)
-            if one_step_transition:
-                algorithm.memory.store(*one_step_transition)
-            algorithm.memorize(obs, action, reward, next_obs, done)
-            state = next_state
-            if done:
-                break
+        _tqdm = tqdm(range(10), 'Self-Play')
+        for i_game in _tqdm:
+            done = False
+            state = env.get_state()
+            for cnt in count():
+                env.render()
+                obs = state['observation']
+                valid_actions = state['valid_actions']
+                action = algorithm.get_action(obs, valid_actions)
+                next_state, reward, done = env.step(action)
+                next_obs = next_state['observation']
+                obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
+                transition = [obs, action, reward, next_obs, done]
+                one_step_transition = algorithm.memory_n.store(*transition)
+                if one_step_transition:
+                    algorithm.memory.store(*one_step_transition)
+                algorithm.memorize(obs, action, reward, next_obs, done)
+                state = next_state
+                if done:
+                    break
+                
+            env.reset()
             
-        if episode % 10 == 0:
-            history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
-            plot_timeseries(history_loss, args.figure_path, 'episode', 'loss', 'Training Loss')
+        history_loss = algorithm.replay(args.batch_size, verbose=args.verbose)
+        plot_timeseries(history_loss, args.figure_path, 'episode', 'loss', 'Training Loss')
         
-        if episode % 100 == 0 and algorithm.fully_mem(0.5):
+        if (episode + 1) % 10 == 0:
             best_model.load(best_model_path, device)
             improved = evaluator.eval(best_model, model)
             
@@ -127,10 +132,9 @@ def main():
                 model.save(best_model_path)
                 
             model.save(args.model_path)
-                
+                    
             plot_timeseries(model.elo_history, args.figure_path, 'episode', 'elo', 'Elo')
             
-        env.reset()
 
 if __name__ == "__main__":
     main()

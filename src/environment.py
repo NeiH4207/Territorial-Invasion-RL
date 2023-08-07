@@ -26,6 +26,7 @@ class AgentFighting(object):
         self.players = [Player(i, self.num_players) for i in range(self.num_players)]
         self.current_player = 0
         self.state = None
+        self.last_diff_score = 0
         self.s_counter = {}
         self.reset()
         
@@ -204,6 +205,9 @@ class AgentFighting(object):
             valids[action] = self.is_valid_action(action)
             
         return valids
+    
+    def get_last_diff_score(self):
+        return self.last_diff_score
                     
     def step(self, action, verbose=False):
         """
@@ -229,18 +233,20 @@ class AgentFighting(object):
             
         new_scores = self.state.scores
         diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
-        reward = 0.5 if diff_new_score > 0 else -0.5
+        reward = 0.25 if diff_new_score > 0 else -0.5
         
         if diff_new_score > diff_previous_scores:
             reward += diff_new_score - diff_previous_scores
         elif diff_new_score < diff_previous_scores:
             reward -= diff_previous_scores - diff_new_score
         else:
-            reward -= 0.25
+            reward -= 0.1
+            
+        self.last_diff_score = diff_new_score
         
         next_state = self.state.get_state()
-        _s_present = self.obs_string_representation(next_state['observation'])
-        self.s_counter[_s_present] = \
-            self.s_counter.get(_s_present, 0) + 1
+        # _s_present = self.obs_string_representation(next_state['observation'])
+        # self.s_counter[_s_present] = \
+        #     self.s_counter.get(_s_present, 0) + 1
         
         return next_state, reward, self.is_terminal()

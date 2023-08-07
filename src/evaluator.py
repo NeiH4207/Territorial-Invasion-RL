@@ -80,24 +80,24 @@ class Evaluator():
             if i < self.n_evals - 1:
                 self.env.reset()
             _tqdm.set_description(f'Evaluating (Win {num_wins}/{self.n_evals})')
-        
-        if total_scores[0] > total_scores[1]:
-            score = 1
-        if total_scores[0] == total_scores[1]:
-            score = 0.5
-        else:
-            score = 0
+
+            if (i + 1) % 10 == 0:
+                if total_scores[1] > total_scores[0]:
+                    score = 1
+                elif total_scores[0] == total_scores[1]:
+                    score = 0.5
+                else:
+                    score = 0
+                    
+                elo_1, elo_2 = self.compute_elo(elo_1, elo_2, score)
+                old_model.set_elo(elo_1)
+                new_model.set_elo(elo_2)
+                total_scores = [0, 0]
+                
+        logging.info('Elo changes from {} to {} | Win {}/{}'.\
+            format(old_elo, elo_2, num_wins, self.n_evals))
             
-        elo_1, elo_2 = self.compute_elo(elo_1, elo_2, score)
-        if change_elo:
-            old_model.set_elo(elo_1)
-            new_model.set_elo(elo_2)
-            logging.info('Elo changes from {} to {} | Win {}/{}'.\
-                format(old_elo, elo_2, num_wins, self.n_evals))
-        else:
-            won_player = 1 if num_wins <= self.n_evals - num_wins else 2
-            num_wins = num_wins if won_player == 2 else self.n_evals - num_wins
-        return num_wins / self.n_evals >= 0.55 or total_scores[0] > total_scores[1]
+        return num_wins / self.n_evals >= 0.55 
     
     
     def eval_pg(self, old_model, new_model, change_elo=True):

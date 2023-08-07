@@ -1,10 +1,10 @@
 {
-    "conv1-num-filter": 32, 
+    "conv1-num-filter": 128, 
     "conv1-kernel-size": 3,
     "conv1-stride": 1,
     "conv1-padding": 1,
 
-    "num-resblocks": 3,
+    "num-resblocks": 32,
     "resblock-kernel-size": 3,
     
     "fc1-num-units": 1024,
