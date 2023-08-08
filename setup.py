@@ -7,7 +7,8 @@ setup(
        install_requires=[
            'pip<=23.0.1',
            'setuptools<=66',
-           'wheel<=0.38.4'
+           'wheel<=0.38.4',
+           'numpy<=1.25.2',
        ],
        entry_points={
            'console_scripts': [

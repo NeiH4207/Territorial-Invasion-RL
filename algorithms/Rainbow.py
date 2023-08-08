@@ -42,7 +42,7 @@ class Rainbow(DQN):
         super().__init__(observation_shape, n_actions, model, tau, 
                          gamma, epsilon, epsilon_min, epsilon_decay,
                          memory_size, model_path)
-        self.memory = self.memory = PrioritizedReplayBuffer(
+        self.memory = PrioritizedReplayBuffer(
             observation_shape, memory_size, batch_size, alpha
         )
         self.beta = beta
@@ -52,27 +52,34 @@ class Rainbow(DQN):
         self.v_max = v_max
         self.atom_size = atom_size
         self.batch_size = batch_size
-        self.gamma = gamma
-        self.n_step = n_step
+        self.alpha = alpha
         self.support = torch.linspace(v_min, v_max, atom_size).to(self.device)
         self.transition = list()
         self.memory_n = ReplayBuffer(
                 observation_shape, memory_size, batch_size, n_step=n_step, gamma=gamma
             )
-    
-    def reset_memory(self):        
-        self.memory.size = 0
         
-    def set_multi_agent_env(self, num_players, num_agents):
-        self.num_players = num_players
-        self.num_agents = num_agents
+    def set_multi_agent_env(self, n_agents):
+        self.n_agents = n_agents
+        
+        self.memory = PrioritizedReplayBuffer(
+            self.observation_shape, 
+            self.memory_size, 
+            self.batch_size, 
+            self.alpha,
+            n_step=self.n_step * n_agents, 
+        )
+        
         self.memory_n = ReplayBuffer(
             self.observation_shape, 
             self.memory_size, 
             self.batch_size, 
-            n_step=self.n_step * num_players * num_agents + 1, 
-            gamma=self.gamma
+            n_step=self.n_step * n_agents, 
+            gamma=self.gamma,
+            n_agents=n_agents
         )
+    def reset_memory(self):        
+        self.memory.size = 0
         
     def get_action(self, state, valid_actions=None):
         state = torch.FloatTensor(np.array(state)).to(self.device)
@@ -159,11 +166,11 @@ class Rainbow(DQN):
             torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
             self.policy_net.optimizer.step()
             # PER: update priorities
+            self.soft_update()
             loss_for_prior = elementwise_loss.detach().cpu().numpy()
             new_priorities = loss_for_prior + self.prior_eps
             self.memory.update_priorities(samples['indices'], new_priorities)
             
-            self.soft_update()
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
             

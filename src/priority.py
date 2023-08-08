@@ -13,7 +13,8 @@ class ReplayBuffer:
         size: int, 
         batch_size: int = 32, 
         n_step: int = 1, 
-        gamma: float = 0.99
+        gamma: float = 0.99,
+        n_agents: int = 1,
     ):
         if not isinstance(obs_dim, tuple):
             obs_dim = (obs_dim,)
@@ -29,6 +30,7 @@ class ReplayBuffer:
         self.n_step_buffer = deque(maxlen=n_step)
         self.n_step = n_step
         self.gamma = gamma
+        self.n_agents = n_agents
 
     def store(
         self, 
@@ -92,8 +94,8 @@ class ReplayBuffer:
         """Return n step rew, next_obs, and done."""
         # info of the last transition
         rew, next_obs, done = n_step_buffer[-1][-3:]
-
-        for transition in reversed(list(n_step_buffer)[:-1]):
+        reversed_n_step_buffer = [x for x in reversed(list(n_step_buffer)[:-self.n_agents])][::self.n_agents]
+        for transition in reversed_n_step_buffer:
             r, n_o, d = transition[-3:]
 
             rew = r + gamma * rew * (1 - d)

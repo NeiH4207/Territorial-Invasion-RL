@@ -1,7 +1,6 @@
 import time
 import gym
 
-from models.GYM.GymDQN import CartPole
 """
 Created on Tue Apr 27 2:19:47 2023
 @author: hien
@@ -32,8 +31,7 @@ def argument_parser():
     parser.add_argument('--alpha', type=float, default=0.2)
     parser.add_argument('--beta', type=float, default=0.6)
     parser.add_argument('--prior_eps', type=float, default=1e-6)
-    
-    parser.add_argument('--n-step', type=int, default=3)
+    parser.add_argument('--n-step', type=int, default=4)
     
     # model training arguments
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -55,17 +53,17 @@ def main():
         
     env = gym.make('ma_gym:Combat-v0')
     n_actions = env.action_space[0].n
-    observation_shape = env._grid_shape[0] * 10
+    observation_shape = (11, 5, 5)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     algorithm = None
     set_seed(1)
     
-    model = CartPole(
+    model = RainbowNet(
         observation_shape=observation_shape,
         n_actions=n_actions,
-        atom_size=51, 
-        v_min=-20,
-        v_max=20,
+        atom_size=31, 
+        v_min=-15,
+        v_max=30,
         optimizer=args.optimizer,
         lr=args.lr,
         device=device
@@ -86,10 +84,12 @@ def main():
         beta=args.beta,
         prior_eps=args.prior_eps,
         n_step=args.n_step,
-        v_min=0,
-        v_max=500
+        v_min=-15,
+        v_max=30,
+        atom_size=31,
     )
-    algorithm.set_multi_agent_env(1, env.n_agents)
+    
+    algorithm.set_multi_agent_env(env.n_agents)
     if args.model_path:
         model_dir = os.path.dirname(args.model_path)
         if not os.path.exists(model_dir):
@@ -109,16 +109,35 @@ def main():
     
     for episode in tqdm(range(args.num_episodes)):
         obs_n = env.reset()
+        obs_n = [np.array(obs_i).reshape(-1, 5, 5) for obs_i in obs_n]
+        for i in range(env.n_agents):
+            for j in range(env.n_agents):
+                opp_pos_j = (obs_n[i][0]==-1) & (obs_n[i][j]==1) * 1
+                obs_n[i] = np.concatenate([obs_n[i], [opp_pos_j]], axis=0)
+            
         env.render()
-        cnt = 0
+        # cnt = 0
         done_n = [False for _ in range(env.n_agents)]
         ep_reward = 0
         while not all(done_n):
             actions = [algorithm.get_action(obs_i) for obs_i in obs_n]
+            opp_health_preaction = np.array(list(env.opp_health.values()))
             next_obs_n, reward_n, done_n, info = env.step(actions)
+            next_obs_n = [np.array(obs_i).reshape(-1, 5, 5) for obs_i in next_obs_n]
+            for i in range(env.n_agents):
+                for j in range(env.n_agents):
+                    opp_pos_j = (next_obs_n[i][0]==-1) & (next_obs_n[i][j]==1) * 1
+                    next_obs_n[i] = np.concatenate([next_obs_n[i], [opp_pos_j]], axis=0)
+                
+            curr_opp_health = np.array(list(env.opp_health.values()))
+            opp_health_reduce_mean = np.mean(opp_health_preaction - curr_opp_health)
+            for i in range(env.n_agents):
+                reward_n[i] = reward_n[i] + opp_health_reduce_mean
+                if info['health'][i] > 0:
+                    reward_n[i] += 0.01 * info['health'][i]
             env.render()
             ep_reward += sum(reward_n)
-            for state, action, reward, next_state, done in zip(obs_n, actions, reward_n, obs_n, done_n):
+            for state, action, reward, next_state, done in zip(obs_n, actions, reward_n, next_obs_n, done_n):
                 # reward = np.mean(reward_n) * 0.5 + reward * 0.5
                 transition = [state, action, reward, next_state, done]
                 one_step_transition = algorithm.memory_n.store(*transition)
