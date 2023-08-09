@@ -74,17 +74,17 @@ def main():
     args = parse_args()
     configs = json.load(open('configs/map.json'))
     env = AgentFighting(args, configs, args.show_screen)
-    n_observations = env.get_space_size()
+    observation_shape = env.get_space_size()
     n_actions = env.n_actions
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     players = [
-        AlphaZeroNet(n_observations, n_actions, 
+        AlphaZeroNet(observation_shape, n_actions, 
                 optimizer=args.optimizer, 
                 lr=args.lr).to(device),
-        AlphaZeroNet(n_observations, n_actions, 
+        AlphaZeroNet(observation_shape, n_actions, 
                 optimizer=args.optimizer, 
                 lr=args.lr).to(device),
-        # DQN(n_observations, n_actions, 
+        # DQN(observation_shape, n_actions, 
         #         optimizer=args.optimizer, 
         #         lr=args.lr, dueling=True)
     ]

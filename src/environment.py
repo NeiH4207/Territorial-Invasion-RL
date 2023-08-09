@@ -208,6 +208,14 @@ class AgentFighting(object):
     
     def get_last_diff_score(self):
         return self.last_diff_score
+    
+    def get_curr_agent_idx(self):
+        return self.state.agent_current_idx
+                    
+    def get_diff_score(self):
+        scores = self.state.scores
+        curr_player_id = self.state.current_player
+        return scores[curr_player_id] - scores[1 - curr_player_id]
                     
     def step(self, action, verbose=False):
         """
@@ -245,8 +253,4 @@ class AgentFighting(object):
         self.last_diff_score = diff_new_score
         
         next_state = self.state.get_state()
-        # _s_present = self.obs_string_representation(next_state['observation'])
-        # self.s_counter[_s_present] = \
-        #     self.s_counter.get(_s_present, 0) + 1
-        
         return next_state, reward, self.is_terminal()

@@ -50,13 +50,13 @@ def main():
     else:
         env = gym.make('CartPole-v1')
         
-    n_observations, n_actions = env.observation_space.shape[0], env.action_space.n
+    observation_shape, n_actions = env.observation_space.shape[0], env.action_space.n
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     algorithm = None
     set_seed(1)
     
     model = CartPole(
-        n_observations=n_observations,
+        observation_shape=observation_shape,
         n_actions=n_actions,
         atom_size=51, 
         v_min=0,
@@ -68,7 +68,7 @@ def main():
     model = model.to(device)
     
     algorithm = Rainbow(   
-        n_observations=n_observations, 
+        observation_shape=observation_shape, 
         n_actions=n_actions,
         model=model,
         tau=args.tau,

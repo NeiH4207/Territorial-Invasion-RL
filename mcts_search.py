@@ -49,13 +49,13 @@ def main():
     args = argument_parser()
     configs = json.load(open('configs/map.json'))
     env = AgentFighting(args, configs, args.show_screen)
-    n_observations = env.get_space_size()
+    observation_shape = env.get_space_size()
     n_actions = env.n_actions
-    logging.info('Observation space: {}'.format(n_observations))
+    logging.info('Observation space: {}'.format(observation_shape))
     logging.info('Action space: {}'.format(n_actions))
     algorithm = None
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = DQN(n_observations, n_actions, 
+    model = DQN(observation_shape, n_actions, 
                 optimizer=args.optimizer, 
                 lr=args.lr,
                 dueling=True).to(device)

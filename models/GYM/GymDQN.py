@@ -14,7 +14,7 @@ class CartPole(BaseNet):
 
     def __init__(
         self, 
-        n_observations: int, 
+        observation_shape: int, 
         n_actions: int,
         atom_size: int, 
         v_min: int,
@@ -23,11 +23,11 @@ class CartPole(BaseNet):
         lr: float = 0.001,
         device='cuda') -> None:
         super(BaseNet, self).__init__()
-        self.n_observations = n_observations
+        self.observation_shape = observation_shape
         self.n_actions = n_actions
         self.atom_size = atom_size
         self.support = torch.linspace(v_min, v_max, atom_size).to(device)
-        self.feature = nn.Linear(n_observations, 128)
+        self.feature = nn.Linear(observation_shape, 128)
         
         # set advance layer
         self.advance_hidden = NoisyLinear(128, 128)

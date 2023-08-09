@@ -46,12 +46,12 @@ class Memory(object):
         return state_batch, action_batch, reward_batch, next_state_batch, done_batch
 
 class DQN():
-    def __init__(self, n_observations=None, n_actions=None, model=None,
+    def __init__(self, observation_shape=None, n_actions=None, model=None,
                     tau=0.005, gamma=0.99, epsilon=0.9, epsilon_min=0.05, 
                     epsilon_decay=0.99,
                     memory_size=4096,  model_path=None):
         super().__init__()
-        self.n_observations = n_observations
+        self.observation_shape = observation_shape
         self.n_actions = n_actions
         self.memory_size = memory_size
         self.memory = Memory(memory_size)
@@ -79,9 +79,11 @@ class DQN():
     def memorize(self, state, action, reward, next_state, done):
         self.memory.store(state, action, reward, next_state, done)
         
-    def get_action(self, state, valid_actions=None):
+    def get_action(self, state, valid_actions=None, model=None):
+        if model is None:
+            model = self.policy_net
         state = torch.FloatTensor(np.array(state)).to(self.device)
-        act_values = self.policy_net.predict(state)[0]
+        act_values = model.predict(state)[0]
         
         if np.random.rand() <= self.epsilon:
             if valid_actions is not None:

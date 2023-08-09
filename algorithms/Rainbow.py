@@ -15,7 +15,7 @@ class Rainbow(DQN):
     
     def __init__(
         self, 
-        n_observations=None,
+        observation_shape=None,
         n_actions=None, 
         model=None,
         # DQN parameters
@@ -39,11 +39,11 @@ class Rainbow(DQN):
         atom_size: int = 51,
         ):
 
-        super().__init__(n_observations, n_actions, model, tau, 
+        super().__init__(observation_shape, n_actions, model, tau, 
                          gamma, epsilon, epsilon_min, epsilon_decay,
                          memory_size, model_path)
-        self.memory = self.memory = PrioritizedReplayBuffer(
-            n_observations, memory_size, batch_size, alpha
+        self.memory = PrioritizedReplayBuffer(
+            observation_shape, memory_size, batch_size, alpha
         )
         self.beta = beta
         self.prior_eps = prior_eps
@@ -52,31 +52,41 @@ class Rainbow(DQN):
         self.v_max = v_max
         self.atom_size = atom_size
         self.batch_size = batch_size
-        self.gamma = gamma
-        self.n_step = n_step
+        self.alpha = alpha
         self.support = torch.linspace(v_min, v_max, atom_size).to(self.device)
         self.transition = list()
         self.memory_n = ReplayBuffer(
-                n_observations, memory_size, batch_size, n_step=n_step, gamma=gamma
+                observation_shape, memory_size, batch_size, n_step=n_step, gamma=gamma
             )
-    
+        
+    def set_multi_agent_env(self, n_agents):
+        self.n_agents = n_agents
+        
+        self.memory = PrioritizedReplayBuffer(
+            self.observation_shape, 
+            self.memory_size, 
+            self.batch_size, 
+            self.alpha,
+            n_step=self.n_step * n_agents + 1,
+            n_agents=n_agents
+        )
+        
+        self.memory_n = ReplayBuffer(
+            self.observation_shape, 
+            self.memory_size, 
+            self.batch_size, 
+            n_step=self.n_step * n_agents + 1, 
+            gamma=self.gamma,
+            n_agents=n_agents
+        )
     def reset_memory(self):        
         self.memory.size = 0
         
-    def set_multi_agent_env(self, num_players, num_agents):
-        self.num_players = num_players
-        self.num_agents = num_agents
-        self.memory_n = ReplayBuffer(
-            self.n_observations, 
-            self.memory_size, 
-            self.batch_size, 
-            n_step=self.n_step * num_players * num_agents + 1, 
-            gamma=self.gamma
-        )
-        
-    def get_action(self, state, valid_actions=None):
+    def get_action(self, state, valid_actions=None, model=None):
+        if model is None:
+            model = self.policy_net
         state = torch.FloatTensor(np.array(state)).to(self.device)
-        act_values = self.policy_net.predict(state)[0]
+        act_values = model.predict(state)[0]
         if valid_actions is not None:
             act_values[~valid_actions] = -float('inf')
         return int(np.argmax(act_values))  # returns action
@@ -159,11 +169,11 @@ class Rainbow(DQN):
             torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
             self.policy_net.optimizer.step()
             # PER: update priorities
+            self.soft_update()
             loss_for_prior = elementwise_loss.detach().cpu().numpy()
             new_priorities = loss_for_prior + self.prior_eps
             self.memory.update_priorities(samples['indices'], new_priorities)
             
-            self.soft_update()
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
             
