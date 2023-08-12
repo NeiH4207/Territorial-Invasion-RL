@@ -36,8 +36,8 @@ class ResBlock(nn.Module):
     
 class RainbowNet(nn.Module):
     def __init__(self, 
-                 input_shape, 
-                 output_shape, 
+                 observation_shape, 
+                 n_actions, 
                  atom_size: int, 
                  v_min: int,
                  v_max: int,
@@ -47,11 +47,11 @@ class RainbowNet(nn.Module):
         super(RainbowNet, self).__init__()
         # game params
         self.config = config
-        self.input_shape = input_shape
-        self.output_shape = output_shape
+        self.observation_shape = observation_shape
+        self.n_actions = n_actions
         self.atom_size = atom_size
         self.support = torch.linspace(v_min, v_max, atom_size).to(device)
-        self.in_channels = input_shape[0]
+        self.in_channels = observation_shape[0]
         self.elo_history = np.array([1000])
         self.loss_history = np.array([])
         
@@ -66,13 +66,13 @@ class RainbowNet(nn.Module):
                                                     config['resblock-kernel-size']))
         
         
-        self.out_conv1_dim = int((self.input_shape[1] - config['conv1-kernel-size'] \
+        self.out_conv1_dim = int((self.observation_shape[1] - config['conv1-kernel-size'] \
             + 2 * config['conv1-padding']) / config['conv1-stride'] + 1)
         self.flatten_dim = config['conv1-num-filter'] * ((self.out_conv1_dim) ** 2)
         
         # set advance layer
         self.advance_hidden = NoisyLinear(self.flatten_dim, config['fc1-num-units'])
-        self.advance = NoisyLinear(config['fc1-num-units'], self.output_shape * self.atom_size)
+        self.advance = NoisyLinear(config['fc1-num-units'], self.n_actions * self.atom_size)
         
         self.value_hidden = NoisyLinear(self.flatten_dim, config['fc1-num-units'])
         self.value = NoisyLinear(config['fc1-num-units'], self.atom_size)
@@ -98,7 +98,7 @@ class RainbowNet(nn.Module):
         val_hid = F.relu(self.value_hidden(feature))
         
         advance = self.advance(adv_hid).view(
-            -1, self.output_shape, self.atom_size
+            -1, self.n_actions, self.atom_size
         )
         value = self.value(val_hid).view(-1, 1, self.atom_size)
         q_atoms = value + advance - advance.mean(dim=1, keepdim=True)
@@ -169,7 +169,7 @@ class RainbowNet(nn.Module):
         self.eval()
         if type(x) == np.ndarray:
             x = torch.tensor(x, dtype=torch.float32, device=self.get_device())
-        x = x.reshape(-1, self.input_shape[0], self.input_shape[1], self.input_shape[2])
+        x = x.reshape(-1, self.observation_shape[0], self.observation_shape[1], self.observation_shape[2])
         output = self.forward(x).detach()
         return output.detach().cpu().numpy()
     

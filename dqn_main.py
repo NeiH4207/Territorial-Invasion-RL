@@ -12,12 +12,12 @@ import os
 import time
 import torch
 from tqdm import tqdm
-from algorithms.Rainbow import Rainbow
 from src.evaluator import Evaluator
 from src.environment import AgentFighting
 from src.utils import *
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 from argparse import ArgumentParser
+from algorithms.Rainbow import Rainbow
 from models.RainbowNet import RainbowNet
 
 def argument_parser():
@@ -134,7 +134,7 @@ def main():
                     for obs, action, reward, prev_diff_score in zip(observations, actions, local_rewards, prev_diff_scores):
                         global_reward = curr_diff_score - prev_diff_score
                         # obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
-                        reward = reward * 0.25 + global_reward * 0.75
+                        reward = reward * 0.85 + global_reward * 0.15
                         transition = [obs, action, reward, next_obs, False]
                         one_step_transition = algorithm.memory_n.store(*transition)
                         if one_step_transition:

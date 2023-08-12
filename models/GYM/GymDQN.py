@@ -27,15 +27,15 @@ class CartPole(BaseNet):
         self.n_actions = n_actions
         self.atom_size = atom_size
         self.support = torch.linspace(v_min, v_max, atom_size).to(device)
-        self.feature = nn.Linear(observation_shape, 128)
+        self.feature = nn.Linear(observation_shape, 1024)
         
         # set advance layer
-        self.advance_hidden = NoisyLinear(128, 128)
-        self.advance = NoisyLinear(128, n_actions * atom_size)
+        self.advance_hidden = NoisyLinear(1024, 256)
+        self.advance = NoisyLinear(256, n_actions * atom_size)
         
         # set value layer
-        self.value_hidden = NoisyLinear(128, 128)
-        self.value = NoisyLinear(128, atom_size)
+        self.value_hidden = NoisyLinear(1024, 256)
+        self.value = NoisyLinear(256, atom_size)
         
         
         self.set_optimizer(optimizer, lr)
