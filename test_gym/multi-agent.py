@@ -122,7 +122,7 @@ def main():
             env.render()
             ep_reward += sum(reward_n)
             for state, action, reward, next_state, done in zip(obs_n, actions, reward_n, next_obs_n, done_n):
-                transition = [state, action, reward, next_state, done]
+                transition = [state, action, reward, next_state, False]
                 one_step_transition = algorithm.memory_n.store(*transition)
                 if one_step_transition:
                     algorithm.memorize(*one_step_transition)

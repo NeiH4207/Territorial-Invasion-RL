@@ -21,9 +21,9 @@ class Rainbow(DQN):
         # DQN parameters
         tau=0.005, 
         gamma=0.99, 
-        epsilon=0.9, 
-        epsilon_min=0.05, 
-        epsilon_decay=0.99, 
+        epsilon=0.5, 
+        epsilon_min=0.01, 
+        epsilon_decay=0.995, 
         memory_size=4096, 
         batch_size=32, 
         model_path=None,
@@ -82,14 +82,17 @@ class Rainbow(DQN):
     def reset_memory(self):        
         self.memory.size = 0
         
-    def get_action(self, state, valid_actions=None, model=None):
-        if model is None:
-            model = self.policy_net
-        state = torch.FloatTensor(np.array(state)).to(self.device)
-        act_values = model.predict(state)[0]
-        if valid_actions is not None:
-            act_values[~valid_actions] = -float('inf')
-        return int(np.argmax(act_values))  # returns action
+    def get_action(self, state, valid_actions=None):
+        if np.random.rand() <= self.epsilon:
+            if valid_actions is None:
+                return np.random.choice(self.n_actions)
+            return np.random.choice(np.arange(self.n_actions)[valid_actions])
+        else:
+            state = torch.FloatTensor(np.array(state)).to(self.device)
+            act_values = self.policy_net.predict(state)[0]
+            if valid_actions is not None:
+                act_values[~valid_actions] = -float('inf')
+            return int(np.argmax(act_values))  # returns action
         
     def calculate_dqn_loss(
         self, 
@@ -180,7 +183,7 @@ class Rainbow(DQN):
         self.policy_net.add_loss(mean_loss)
         self.policy_net.reset_noise()
         self.target_net.reset_noise()
-        
+        self.adaptiveEGreedy()
         return self.policy_net.get_loss()
         
     
