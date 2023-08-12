@@ -103,6 +103,9 @@ class ReplayBuffer:
 
         return rew, next_obs, done
 
+    def free_buffer(self):
+        self.n_step_buffer.clear()
+
     def __len__(self) -> int:
         return self.size
     
@@ -126,12 +129,13 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         alpha: float = 0.6,
         n_step: int = 1, 
         gamma: float = 0.99,
+        n_agents: int = 1,
     ):
         """Initialization."""
         assert alpha >= 0
         
         super(PrioritizedReplayBuffer, self).__init__(
-            obs_dim, size, batch_size, n_step, gamma
+            obs_dim, size, batch_size, n_step, gamma, n_agents
         )
         self.max_priority, self.tree_ptr = 1.0, 0
         self.alpha = alpha

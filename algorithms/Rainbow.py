@@ -67,23 +67,26 @@ class Rainbow(DQN):
             self.memory_size, 
             self.batch_size, 
             self.alpha,
-            n_step=self.n_step * n_agents, 
+            n_step=self.n_step * n_agents + 1,
+            n_agents=n_agents
         )
         
         self.memory_n = ReplayBuffer(
             self.observation_shape, 
             self.memory_size, 
             self.batch_size, 
-            n_step=self.n_step * n_agents, 
+            n_step=self.n_step * n_agents + 1, 
             gamma=self.gamma,
             n_agents=n_agents
         )
     def reset_memory(self):        
         self.memory.size = 0
         
-    def get_action(self, state, valid_actions=None):
+    def get_action(self, state, valid_actions=None, model=None):
+        if model is None:
+            model = self.policy_net
         state = torch.FloatTensor(np.array(state)).to(self.device)
-        act_values = self.policy_net.predict(state)[0]
+        act_values = model.predict(state)[0]
         if valid_actions is not None:
             act_values[~valid_actions] = -float('inf')
         return int(np.argmax(act_values))  # returns action

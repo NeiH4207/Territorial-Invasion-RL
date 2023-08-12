@@ -1,6 +1,8 @@
 import time
 import gym
 
+from models.GYM.GymDQN import CartPole
+
 """
 Created on Tue Apr 27 2:19:47 2023
 @author: hien
@@ -15,7 +17,6 @@ log = logging.getLogger(__name__)
 from argparse import ArgumentParser
 
 from algorithms.Rainbow import Rainbow
-from models.RainbowNet import RainbowNet
 import gym
 
 def argument_parser():
@@ -34,13 +35,13 @@ def argument_parser():
     parser.add_argument('--n-step', type=int, default=4)
     
     # model training arguments
-    parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--batch-size', type=int, default=128)
+    parser.add_argument('--lr', type=float, default=3e-5)
+    parser.add_argument('--batch-size', type=int, default=64)
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=8192)
-    parser.add_argument('--num-episodes', type=int, default=1000)
+    parser.add_argument('--num-episodes', type=int, default=10000)
     parser.add_argument('--model-path', type=str, default='tmp/model.pt')
-    parser.add_argument('--load-model', action='store_true')
+    parser.add_argument('--load-model', action='store_true', default=False)
     
     return parser.parse_args()
 
@@ -51,19 +52,19 @@ def main():
     else:
         mode = 'rgb_array'
         
-    env = gym.make('ma_gym:Combat-v0')
+    env = gym.make('ma_gym:Checkers-v0')
     n_actions = env.action_space[0].n
-    observation_shape = (11, 5, 5)
+    observation_shape = env.observation_space[0].shape[0] * 2
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     algorithm = None
     set_seed(1)
     
-    model = RainbowNet(
+    model = CartPole(
         observation_shape=observation_shape,
         n_actions=n_actions,
         atom_size=31, 
         v_min=-15,
-        v_max=30,
+        v_max=75,
         optimizer=args.optimizer,
         lr=args.lr,
         device=device
@@ -85,11 +86,12 @@ def main():
         prior_eps=args.prior_eps,
         n_step=args.n_step,
         v_min=-15,
-        v_max=30,
+        v_max=75,
         atom_size=31,
     )
     
     algorithm.set_multi_agent_env(env.n_agents)
+    
     if args.model_path:
         model_dir = os.path.dirname(args.model_path)
         if not os.path.exists(model_dir):
@@ -109,66 +111,34 @@ def main():
     
     for episode in tqdm(range(args.num_episodes)):
         obs_n = env.reset()
-        obs_n = [np.array(obs_i).reshape(-1, 5, 5) for obs_i in obs_n]
-        for i in range(env.n_agents):
-            for j in range(env.n_agents):
-                opp_pos_j = (obs_n[i][0]==-1) & (obs_n[i][j]==1) * 1
-                obs_n[i] = np.concatenate([obs_n[i], [opp_pos_j]], axis=0)
-            
+        obs_n = [np.array(obs_n).flatten(), np.array(obs_n[::-1]).flatten()]
         env.render()
-        # cnt = 0
         done_n = [False for _ in range(env.n_agents)]
         ep_reward = 0
         while not all(done_n):
-            actions = [algorithm.get_action(obs_i) for obs_i in obs_n]
-            opp_health_preaction = np.array(list(env.opp_health.values()))
+            actions = [algorithm.get_action(obs) for obs in obs_n]
             next_obs_n, reward_n, done_n, info = env.step(actions)
-            next_obs_n = [np.array(obs_i).reshape(-1, 5, 5) for obs_i in next_obs_n]
-            for i in range(env.n_agents):
-                for j in range(env.n_agents):
-                    opp_pos_j = (next_obs_n[i][0]==-1) & (next_obs_n[i][j]==1) * 1
-                    next_obs_n[i] = np.concatenate([next_obs_n[i], [opp_pos_j]], axis=0)
-                
-            curr_opp_health = np.array(list(env.opp_health.values()))
-            opp_health_reduce_mean = np.mean(opp_health_preaction - curr_opp_health)
-            for i in range(env.n_agents):
-                reward_n[i] = reward_n[i] + opp_health_reduce_mean
-                if info['health'][i] > 0:
-                    reward_n[i] += 0.01 * info['health'][i]
+            next_obs_n = [np.array(next_obs_n).flatten(), np.array(next_obs_n[::-1]).flatten()]
             env.render()
             ep_reward += sum(reward_n)
             for state, action, reward, next_state, done in zip(obs_n, actions, reward_n, next_obs_n, done_n):
-                # reward = np.mean(reward_n) * 0.5 + reward * 0.5
                 transition = [state, action, reward, next_state, done]
                 one_step_transition = algorithm.memory_n.store(*transition)
                 if one_step_transition:
-                    algorithm.memory.store(*one_step_transition)
-                algorithm.memorize(state, action, reward, next_state, done)
+                    algorithm.memorize(*one_step_transition)
+                algorithm.memorize(*transition)
             obs_n = next_obs_n
         
         ep_rewards.append(ep_reward)
+        algorithm.memory.free_buffer()
         
         if episode % 3 == 0 and algorithm.fully_mem(0.25):
             history_loss = algorithm.replay(args.batch_size)
             plot_timeseries(history_loss, args.figure_path, 'episode', 'loss', 'Training Loss')
-            plot_timeseries(ep_rewards, args.figure_path, 'episode', 'ep_rewards', 'Training ep_rewards')
+            plot_timeseries(ep_rewards, args.figure_path, 'episode', 'ep_rewards', 'Training Timesteps')
             if ep_rewards[-1] >= max(ep_rewards[:-1]):
                 algorithm.save_model()
                 
-    if args.render_last:
-        algorithm.load_model(args.model_path, device)
-        env = gym.make('ma_gym:Combat-v0')
-        
-        done = False
-        state, info = env.reset()
-        cnt = 0
-        for cnt in count():
-            env.render()
-            action = algorithm.get_action(state)
-            next_state, reward, done, truncated, _ = env.step(action)
-            state = next_state
-            if done or truncated:
-                break
-
+                
 if __name__ == "__main__":
     main()

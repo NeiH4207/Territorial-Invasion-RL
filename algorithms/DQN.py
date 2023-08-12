@@ -79,9 +79,11 @@ class DQN():
     def memorize(self, state, action, reward, next_state, done):
         self.memory.store(state, action, reward, next_state, done)
         
-    def get_action(self, state, valid_actions=None):
+    def get_action(self, state, valid_actions=None, model=None):
+        if model is None:
+            model = self.policy_net
         state = torch.FloatTensor(np.array(state)).to(self.device)
-        act_values = self.policy_net.predict(state)[0]
+        act_values = model.predict(state)[0]
         
         if np.random.rand() <= self.epsilon:
             if valid_actions is not None:
