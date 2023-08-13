@@ -95,8 +95,9 @@ def main():
     algorithm.set_multi_agent_env(env.num_agents)
     
     best_model_path = args.model_path.replace('.pt', '_best.pt')
-    model.save(best_model_path)
+    # model.save(best_model_path)
     best_model = deepcopy(model)
+    best_model.load(best_model_path, device)
     target_player_id = 1
     
     for episode in range(args.num_episodes):
@@ -134,7 +135,7 @@ def main():
                     for obs, action, reward, prev_diff_score in zip(observations, actions, local_rewards, prev_diff_scores):
                         global_reward = curr_diff_score - prev_diff_score
                         # obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
-                        reward = reward * 0.85 + global_reward * 0.15
+                        reward = reward * 0.99 + global_reward * 0.01
                         transition = [obs, action, reward, next_obs, False]
                         one_step_transition = algorithm.memory_n.store(*transition)
                         if one_step_transition:
@@ -158,14 +159,13 @@ def main():
         plot_timeseries(history_loss, args.figure_path, 'episode', 'loss', 'Training Loss')
         
         if (episode + 1) % 10 == 0:
+            model.save(args.model_path)
             best_model.load(best_model_path, device)
             improved = evaluator.eval(best_model, model)
-            
             if improved:
                 model.save(best_model_path)
+                best_model.load(best_model_path, device)
                 
-            model.save(args.model_path)
-                    
             plot_timeseries(model.elo_history, args.figure_path, 'episode', 'elo', 'Elo')
             
 
