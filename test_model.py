@@ -57,7 +57,7 @@ def main():
     
     evaluator = Evaluator(env, n_evals=args.n_evals, device=device)
     
-    evaluator.eval(model_1, model_2, using_prob=False)
+    evaluator.eval(model_1, model_2, using_prob=True)
 
 if __name__ == "__main__":
     main()

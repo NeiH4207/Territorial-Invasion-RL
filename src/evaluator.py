@@ -63,7 +63,7 @@ class Evaluator():
                         action = int(np.argmax(act_values))
                     else:
                         # sclaing the action values to avoid overflow
-                        probs = np.exp(act_values) / (np.sum(np.exp(act_values)) + 1e-10)
+                        probs = np.exp(act_values + 1e-10) / (np.sum(np.exp(act_values)) + 1e-10)
                         probs = probs ** 4 / np.sum(probs ** 4)
                         action = int(torch.multinomial(torch.tensor(probs), 1))
                 else:
@@ -77,7 +77,7 @@ class Evaluator():
                         action = int(np.argmax(act_values))
                     else:
                         # sclaing the action values to avoid overflow
-                        probs = np.exp(act_values) / np.sum(np.exp(act_values))
+                        probs = np.exp(act_values + 1e-10) / (np.sum(np.exp(act_values)) + 1e-10)
                         probs = probs ** 4 / np.sum(probs ** 4)
                         action = int(torch.multinomial(torch.tensor(probs), 1))
                 scores = self.env.state.scores
