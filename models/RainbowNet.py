@@ -196,16 +196,21 @@ class RainbowNet(nn.Module):
         else:
             self.optimizer = optim.AdamW(self.parameters(), lr=lr, amsgrad=True)
     
-    def save(self, path=None):
+    def save(self, path=None, metadata=True):
         if path is None:
             logging.error('Model path not specified')
         state_dict = self.state_dict()
-        checkpoint = {
-            'elo_history': self.elo_history,
-            'loss_history': self.loss_history,
-            'state_dict': state_dict,
-            'optimizer': self.optimizer.state_dict(),
-        }
+        if metadata:
+            checkpoint = {
+                'elo_history': self.elo_history,
+                'loss_history': self.loss_history,
+                'state_dict': state_dict,
+                'optimizer': self.optimizer.state_dict(),
+            }
+        else:
+            checkpoint = {
+                'state_dict': state_dict,
+            }
         torch.save(checkpoint, path)
         logging.info('Model saved to {}'.format(path))
         
@@ -215,8 +220,15 @@ class RainbowNet(nn.Module):
         if path is None:
             raise ValueError("Path is not defined")
         checkpoint = torch.load(path, map_location=device)
-        self.elo_history = checkpoint['elo_history']
-        self.loss_history = checkpoint['loss_history']
+        
         self.load_state_dict(checkpoint['state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer'])
+        
+        if 'elo_history' in checkpoint:
+            self.elo_history = checkpoint['elo_history']
+            
+        if 'loss_history' in checkpoint:
+            self.loss_history = checkpoint['loss_history']
+        if 'optimizer' in checkpoint:
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            
         print('Model loaded from {}'.format(path))

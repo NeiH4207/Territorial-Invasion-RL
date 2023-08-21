@@ -232,6 +232,7 @@ class AgentFighting(object):
         current_player = self.state.current_player
         previous_scores = self.state.scores
         diff_previous_scores = previous_scores[current_player] - previous_scores[1 - current_player]
+        current_agent_idx = self.state.agent_current_idx
         
         self.state.next(action)
         
@@ -249,6 +250,16 @@ class AgentFighting(object):
             reward -= diff_previous_scores - diff_new_score
         else:
             reward -= 0.1
+            
+        next_x, next_y = self.state.agent_coords_in_order[current_player][current_agent_idx]
+        
+        if self.state.territories[current_player][next_x][next_y] == 1:
+            reward -= 0.25
+        else:
+            reward += 0.15
+        
+        if next_x == 0 or next_x == self.state.height - 1 or next_y == 0 or next_y == self.state.width - 1:
+            reward -= 0.2
             
         self.last_diff_score = diff_new_score
         

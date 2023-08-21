@@ -8,10 +8,10 @@
         "max-num-agents": 3,
         "min-num-turns": 70,
         "max-num-turns": 70,
-        "num-castles": 20,
-        "num-ponds": 20
+        "num-castles": 10,
+        "num-ponds": 10
     },
     "v_max": 500,
-    "v_min": -500,
+    "v_min": -100,
     "atom_size": 51
 }

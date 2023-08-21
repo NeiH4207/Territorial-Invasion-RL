@@ -22,7 +22,7 @@ from models.RainbowNet import RainbowNet
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=True)
+    parser.add_argument('--show-screen', type=bool, default=False)
     parser.add_argument('-v', '--verbose', action='store_true', default=True)
     parser.add_argument('--figure-path', type=str, default='figures/')
     parser.add_argument('--n-evals', type=int, default=50)
@@ -30,7 +30,7 @@ def argument_parser():
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--tau', type=int, default=0.01)
-    parser.add_argument('--n-step', type=int, default=4)
+    parser.add_argument('--n-step', type=int, default=3)
     
     # model training arguments
     parser.add_argument('--lr', type=float, default=1e-6)
@@ -101,7 +101,7 @@ def main():
     target_player_id = 1
     
     for episode in range(args.num_episodes):
-        _tqdm = tqdm(range(10), 'Self-Play')
+        _tqdm = tqdm(range(30), 'Self-Play')
         for i_game in _tqdm:
             done = False
             state = env.get_state()
@@ -134,8 +134,8 @@ def main():
                     env.save_image('figures/live_update.png')
                     for obs, action, reward, prev_diff_score in zip(observations, actions, local_rewards, prev_diff_scores):
                         global_reward = curr_diff_score - prev_diff_score
-                        # obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
-                        reward = reward * 0.99 + global_reward * 0.01
+                        obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
+                        reward = reward * 0.975 + global_reward * 0.025
                         transition = [obs, action, reward, next_obs, False]
                         one_step_transition = algorithm.memory_n.store(*transition)
                         if one_step_transition:
@@ -165,6 +165,7 @@ def main():
             if improved:
                 model.save(best_model_path)
                 best_model.load(best_model_path, device)
+                best_model.save(best_model_path.replace('.pt', '_base.pt'), metadata=False)
                 
             plot_timeseries(model.elo_history, args.figure_path, 'episode', 'elo', 'Elo')
             
