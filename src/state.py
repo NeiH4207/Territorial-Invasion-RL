@@ -15,10 +15,10 @@ class State(Map):
         self.open_territory_scores = [0 for _ in range(self.num_players)]
         self.closed_territory_scores = [0 for _ in range(self.num_players)]
         self.territory_scores = [0 for _ in range(self.num_players)]
-        self.alpha = 1
-        self.beta = 10
-        self.gamma = 0.5
-        self.limit_obs_size = 5
+        self.alpha = 1 # effect of wall
+        self.beta = 20 # effect of castle
+        self.gamma = 5 # effect of territory
+        self.limit_obs_size = 10
         
         self.action_map = {
             ('Move', 'U'): 0,
@@ -47,6 +47,22 @@ class State(Map):
             'DR': (1, 1)
         }
         
+        self.n_actions = len(self.action_map.values())
+        
+    def hash_arr(self, arr: np.ndarray):
+        s = ''.join([str(x) for x in arr.flatten()])
+        return s
+        
+    
+    def string_representation(self):
+        """
+        Returns a hash code for string representation of the state
+        """
+        players = [self.current_player, self.current_player ^ 1]
+        s = self.hash_arr(self.agents[players]) + self.hash_arr(self.walls[players]) + \
+            self.hash_arr(self.castles) + self.hash_arr(self.territories[players])
+        return hash(s)    
+    
     def current_position(self):
         return self.agent_coords_in_order[self.current_player][self.agent_current_idx]
         
@@ -75,15 +91,6 @@ class State(Map):
     def get_agent_position(self):
         return self.agent_pos[self.current_player]
     
-    def string_resentation(self):
-        """
-        Returns a hash code for string representation of the state
-        """
-        s = str(self.agent_pos) + \
-            str(self.castles_remaining) + \
-            str(self.territory_board)
-        return hash(s)
-    
     def to_opponent(self):
         state = dcopy(self)
         state.current_player ^= 1
@@ -107,13 +114,15 @@ class State(Map):
 
         return np.array(result)
 
-
+    def terminal(self):
+        return self.remaining_turns == 0
     
     def get_state(self):
         # Standardized variable names to improve readability
         players = [self.current_player, self.current_player ^ 1]
         agent_board = self.agents[players]
         castle_board = self.castles
+        pond_board = self.ponds
         wall_board = self.walls[players]
         territory_board = self.territories[players]
         agent_current_board = np.zeros(agent_board[0].shape)
@@ -126,11 +135,12 @@ class State(Map):
                 agent_board[1],
                 wall_board[1],
                 territory_board[1],
-                castle_board
+                castle_board,
+                pond_board
             ),
             axis=0
         )
-
+        
         # Standardized variable names to improve readability and changed key name
         current_agent_idx = self.agent_current_idx
         current_agent_coord = self.agent_coords_in_order[self.current_player][current_agent_idx]
@@ -141,11 +151,25 @@ class State(Map):
             
         # crop obs to limit_obs_size
         obs = obs[:, :self.limit_obs_size*2-1, :self.limit_obs_size*2-1]
+        masked_obs = [(obs[0] != -1) * 1]
+        obs = np.concatenate([obs, masked_obs], axis=0)
         agent_current_board[current_agent_coord[0], current_agent_coord[1]] = 1
+        
+        valid_actions = np.zeros(len(self.action_map.values()), dtype=bool)
+        for action in list(self.action_map.values()):
+            if self.is_valid_action(action):
+                valid_actions[action] = True
+        if sum(valid_actions) == 0:
+            for action in list(self.action_map.values()):
+                if self.is_valid_action(action, drop_self=True):
+                    valid_actions[action] = True
+            
         return {
             'player-id': self.current_player,
             'observation': obs, 
-            'curr_agent_xy': dcopy(current_agent_coord)
+            'curr_agent_xy': dcopy(current_agent_coord),
+            'valid_actions': valid_actions,
+            'hash_str': self.string_representation(),
             }
 
     def get_scores(self, player):
@@ -253,7 +277,7 @@ class State(Map):
         else:
             return ('Stay',)
     
-    def is_valid_action(self, action):
+    def is_valid_action(self, action, drop_self=False):
         current_player = self.current_player
         agent_coords_in_order = self.agent_coords_in_order
         agent_current_idx = self.agent_current_idx
@@ -278,28 +302,36 @@ class State(Map):
                     agents save next coordinates but agent_coords_in_order is not updated to check this '''
                 valid = False
                 
+            elif self.ponds[next_position[0]][next_position[1]] == 1:
+                valid = False
+                
             elif self.walls[0][next_position[0]][next_position[1]] == 1 \
                     or self.walls[1][next_position[0]][next_position[1]] == 1:
                 valid = False
                 
-            elif self.castles[next_position[0]][next_position[1]] == 1 \
-                    or self.castles[next_position[0]][next_position[1]] == 1:
+            elif self.castles[next_position[0]][next_position[1]] == 1:
                 valid = False
     
         elif action_type[0] == 'Change':
             direction = action_type[1]
-            wall_coord = (self.direction_map[direction][0] + current_position[0],
+            next_position = (self.direction_map[direction][0] + current_position[0],
                         self.direction_map[direction][1] + current_position[1])
-            if not self.in_bounds(wall_coord[0], wall_coord[1]):
+            if not self.in_bounds(next_position[0], next_position[1]):
                 valid = False
                 
-            elif self.castles[wall_coord[0]][wall_coord[1]] == 1 \
-                    or self.castles[wall_coord[0]][wall_coord[1]] == 1:
+            elif self.castles[next_position[0]][next_position[1]] == 1:
                 valid = False
                 
-            elif wall_coord in self.agent_coords_in_order[0] or \
-                        wall_coord in self.agent_coords_in_order[1]:
+            elif self.ponds[next_position[0]][next_position[1]] == 1:
                 valid = False
+                
+            elif next_position in self.agent_coords_in_order[0] or \
+                        next_position in self.agent_coords_in_order[1]:
+                valid = False
+            elif not drop_self and self.walls[current_player][next_position[0]][next_position[1]] == 1:
+                valid = False
+        else:
+            valid = False
                 
         return valid
     
@@ -319,22 +351,22 @@ class State(Map):
         agent_current_idx = self.agent_current_idx
         agent_coords_in_order = self.agent_coords_in_order
         current_position = agent_coords_in_order[current_player][agent_current_idx]
-        is_valid_action = self.is_valid_action(action)
         
-        if action_type[0] == 'Move':
-            direction = action_type[1]
-            next_position = (self.direction_map[direction][0] + current_position[0],
-                          self.direction_map[direction][1] + current_position[1])
-            
-            if is_valid_action:
+        is_valid = self.is_valid_action(action, drop_self=True)
+        
+        if is_valid:
+            if action_type[0] == 'Move':
+                direction = action_type[1]
+                next_position = (self.direction_map[direction][0] + current_position[0],
+                            self.direction_map[direction][1] + current_position[1])
+                
                 self.agents[current_player][next_position[0]][next_position[1]] = 1
                 self.agents[current_player][current_position[0]][current_position[1]] = 0
-            
-        elif action_type[0] == 'Change':
-            direction = action_type[1]
-            wall_coord = (self.direction_map[direction][0] + current_position[0],
-                          self.direction_map[direction][1] + current_position[1])
-            if is_valid_action:
+                
+            elif action_type[0] == 'Change':
+                direction = action_type[1]
+                wall_coord = (self.direction_map[direction][0] + current_position[0],
+                            self.direction_map[direction][1] + current_position[1])
                 if self.walls[0][wall_coord[0]][wall_coord[1]] == 0 \
                             and self.walls[1][wall_coord[0]][wall_coord[1]] == 0:
                     self.walls[current_player][wall_coord[0]][wall_coord[1]] = 1
@@ -342,10 +374,9 @@ class State(Map):
                 else:
                     self.walls[0][wall_coord[0]][wall_coord[1]] = 0
                     self.walls[1][wall_coord[0]][wall_coord[1]] = 0
-        else:
-            pass
-        
-        if is_valid_action:
+            else:
+                pass
+            
             self.update_score()
             
         self.agent_current_idx = (agent_current_idx + 1) % self.num_agents
@@ -355,4 +386,4 @@ class State(Map):
             if self.current_player == 0:
                 self.remaining_turns -= 1
                 
-        return is_valid_action
+        return is_valid

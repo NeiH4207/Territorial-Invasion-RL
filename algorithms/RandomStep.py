@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class RandomStep():
     def __init__(self, n_actions: int = 4, num_agents: int = 2) -> None:
         self.n_actions = n_actions

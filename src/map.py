@@ -14,6 +14,7 @@ class Map(object):
         self.min_num_turns = configs['min-num-turns']
         self.max_num_turns = configs['max-num-turns']
         self.num_castles = configs['num-castles']
+        self.num_ponds = configs['num-ponds']
         self.min_num_agents = configs['min-num-agents']
         self.max_num_agents = configs['max-num-agents']
         self.n_marks = 0
@@ -29,10 +30,11 @@ class Map(object):
                     self.agent_coords_in_order[1].append((i, j))
     
     def make_random_map(self):
-        self.agents = np.zeros((2, self.height_max, self.width_max))
-        self.walls = np.zeros((2, self.height_max, self.width_max), dtype=int)
-        self.castles = np.zeros((self.height_max, self.width_max))
-        self.territories = np.zeros((2, self.height_max, self.width_max))
+        self.agents = np.zeros((2, self.height_max, self.width_max), dtype=np.int8)
+        self.walls = np.zeros((2, self.height_max, self.width_max), dtype=np.int8)
+        self.castles = np.zeros((self.height_max, self.width_max), dtype=np.int8)
+        self.territories = np.zeros((2, self.height_max, self.width_max), dtype=np.int8)
+        self.ponds = np.zeros((self.height_max, self.width_max), dtype=np.int8)
         
         self.height = random.randint(self.height_min, self.height_max)
         self.width = self.height # random.randint(self.width_min, self.width_max)
@@ -55,6 +57,13 @@ class Map(object):
             self.castles[x, y] = 1
             del slots[(x, y)]
         
+        # generate random symmetric castle coords in range of self
+        for i in range(self.num_ponds):
+            # generate random from slots
+            (x, y) = random.choice(list(slots.keys()))
+            self.ponds[x, y] = 1
+            del slots[(x, y)]
+            
         #generate random symmetric agents positions in range of self
         self.num_agents = random.randint(self.min_num_agents, self.max_num_agents)
         for i in range(self.num_agents):
@@ -124,8 +133,6 @@ class Map(object):
     def reset(self):
         self.map = np.zeros((2, self.height, self.width))
                               
-    def string_representation(self):
-        return hash(str(self.map))
     
     def flatten(self):
         self.map.reshape(-1, )

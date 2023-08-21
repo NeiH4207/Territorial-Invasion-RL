@@ -75,6 +75,8 @@ class Screen():
             pygame.image.load(self.dir_path + '/images/board.png'), (512, 512))
         self.castle_img = pygame.transform.scale(
             pygame.image.load(self.dir_path + '/images/castle.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
+        self.pond_img = pygame.transform.scale(
+            pygame.image.load(self.dir_path + '/images/pond.png'), (self.SQUARE_SIZE, self.SQUARE_SIZE))
         
     def load_state(self, state):
         # ID 0: Empty
@@ -85,6 +87,7 @@ class Screen():
         # ID 5: Territory A
         # ID 6: Territory B
         # ID 7: Castle
+        # ID 8: Pond
         
         for i in range(self.height):
             for j in range(self.width):
@@ -103,6 +106,11 @@ class Screen():
                     if self.board[i, j] != 7:
                         self.draw_castle(i, j)
                         self.board[i, j] = 7
+                    continue
+                if state.ponds[i, j] == 1:
+                    if self.board[i, j] != 8:
+                        self.draw_pond(i, j)
+                        self.board[i, j] = 8
                     continue
                 if state.agents[0, i, j] == 1:
                     if self.board[i, j] != 3:
@@ -185,6 +193,9 @@ class Screen():
         
     def draw_castle(self, x, y):
         self.screen.blit(self.castle_img, self.coord(x, y))
+        
+    def draw_pond(self, x, y):
+        self.screen.blit(self.pond_img, self.coord(x, y))
         
     def draw_rectangle(self, coord_1, coord_2, color=BG_COLOR):
         x1, y1 = self.coord(*coord_1)

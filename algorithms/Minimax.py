@@ -1,9 +1,6 @@
 
-import numpy as np
 import torch
-
 from src.state import State
-
 
 class Minimax():
     def __init__(self, env, model, handicap=4, max_depth=4):

@@ -5,7 +5,7 @@ import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim as optim
-from models import ModelConfig
+from models import config
 import logging
 
 from models.NoisyLayer import NoisyLinear
@@ -25,80 +25,57 @@ class ResBlock(nn.Module):
     def forward(self, x):
         residual = x
         out = self.conv1(x)
-        out = F.relu(self.bn1(out))
+        out = self.bn1(out)
+        out = F.relu(out)
         out = self.conv2(out)
         out = self.bn2(out)
         out += residual
         out = F.relu(out)
         return out
     
-class OutBlock(nn.Module):
-    def __init__(self, config, input_shape, output_shape, dueling=True):
-        super(OutBlock, self).__init__()
-        self.config = config
-        self.device = 'cuda' if T.cuda.is_available() else 'cpu'
-        self.fc1 = nn.Linear(input_shape, config['fc1-num-units'])
-        self.fc_bn1 = nn.BatchNorm1d(config['fc1-num-units'])
-
-        self.fc2 = nn.Linear(config['fc1-num-units'], config['fc2-num-units'])
-        self.fc_bn2 = nn.BatchNorm1d(config['fc2-num-units'])
-        
-        self.dueling = dueling
-        if self.dueling:
-            self.value = NoisyLinear(config['fc2-num-units'], output_shape)
-            self.advance = NoisyLinear(config['fc2-num-units'], output_shape)
-        else:
-            self.Qvalue = nn.Linear(config['fc2-num-units'], output_shape)
     
-    def forward(self, s):
-        out = F.dropout(F.relu(self.fc1(s)), p=self.config['fc1-dropout'], training=self.training)  # batch_size x 1024
-        out = F.relu(self.fc2(out))
-        if self.dueling:
-            value = self.value(out) 
-            adv = self.advance(out) 
-            mean_adv = torch.mean(adv, dim=1, keepdim=True)
-            Qvalue = value + adv - mean_adv
-        else:
-            Qvalue = self.Qvalue(out) 
-        return Qvalue
-    
-    
-class DQN(nn.Module):
-    def __init__(self, input_shape, output_shape, optimizer='adamw', lr=0.001, dueling=True):
-        super(DQN, self).__init__()
+class RainbowNet(nn.Module):
+    def __init__(self, 
+                 observation_shape, 
+                 n_actions, 
+                 atom_size: int, 
+                 v_min: int,
+                 v_max: int,
+                 optimizer='adamw', 
+                 device='cuda',
+                 lr=0.001):
+        super(RainbowNet, self).__init__()
         # game params
-        self.name = 'nnet9x9'
-        config = ModelConfig[self.name]
         self.config = config
-        self.input_shape = input_shape
-        self.output_shape = output_shape
-        self.in_channels = input_shape[0]
+        self.observation_shape = observation_shape
+        self.n_actions = n_actions
+        self.atom_size = atom_size
+        self.support = torch.linspace(v_min, v_max, atom_size).to(device)
+        self.in_channels = observation_shape[0]
         self.elo_history = np.array([1000])
         self.loss_history = np.array([])
         
         self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
                                stride=config['conv1-stride'], padding=config['conv1-padding'])
         
-        self.conv2 = nn.Conv2d(config['conv1-num-filter'], config['conv2-num-filter'], kernel_size=config['conv2-kernel-size'],
-                                 stride=config['conv2-stride'], padding=config['conv2-padding'])
-        self.conv3 = nn.Conv2d(config['conv2-num-filter'], config['conv3-num-filter'], kernel_size=config['conv3-kernel-size'],
-                                    stride=config['conv3-stride'], padding=config['conv3-padding'])
-        
         self.bn1 = nn.BatchNorm2d(config['conv1-num-filter'])
-        self.bn2 = nn.BatchNorm2d(config['conv2-num-filter'])
-        self.bn3 = nn.BatchNorm2d(config['conv3-num-filter'])
         
         for block in range(config['num-resblocks']):
-            setattr(self, "res_%i" % block,ResBlock(config['conv3-num-filter'],
-                                                    config['conv3-num-filter'],
+            setattr(self, "res_%i" % block,ResBlock(config['conv1-num-filter'],
+                                                    config['conv1-num-filter'],
                                                     config['resblock-kernel-size']))
         
         
-        self.out_conv1_dim = int((self.input_shape[1] - config['conv1-kernel-size'] + 2 * config['conv1-padding']) / config['conv1-stride'] + 1)
-        self.out_conv2_dim = int((self.out_conv1_dim - config['conv2-kernel-size'] + 2 * config['conv2-padding']) / config['conv2-stride'] + 1)
-        self.out_conv3_dim = int((self.out_conv2_dim - config['conv3-kernel-size'] + 2 * config['conv3-padding']) / config['conv3-stride'] + 1)
-        self.flatten_dim = config['conv3-num-filter'] * ((self.out_conv3_dim) ** 2)
-        self.outblock = OutBlock(config, self.flatten_dim, output_shape, dueling=dueling)
+        self.out_conv1_dim = int((self.observation_shape[1] - config['conv1-kernel-size'] \
+            + 2 * config['conv1-padding']) / config['conv1-stride'] + 1)
+        self.flatten_dim = config['conv1-num-filter'] * ((self.out_conv1_dim) ** 2)
+        
+        # set advance layer
+        self.advance_hidden = NoisyLinear(self.flatten_dim, config['fc1-num-units'])
+        self.advance = NoisyLinear(config['fc1-num-units'], self.n_actions * self.atom_size)
+        
+        self.value_hidden = NoisyLinear(self.flatten_dim, config['fc1-num-units'])
+        self.value = NoisyLinear(config['fc1-num-units'], self.atom_size)
         
         self.set_optimizer(optimizer, lr)
         
@@ -106,19 +83,42 @@ class DQN(nn.Module):
         # detect device for tensor operations
         device = self.conv1.weight.device
         return device
-            
     
-    def forward(self, s):
-        s = F.dropout(F.relu(self.bn1(self.conv1(s))), p=0.3, training=self.training)
-        s = F.dropout(F.relu(self.bn2(self.conv2(s))), p=0.3, training=self.training)
-        s = F.dropout(F.relu(self.bn3(self.conv3(s))), p=0.3, training=self.training)
-        
+    def feature(self, x: torch.Tensor) -> torch.Tensor:
+        """Get feature vector from input."""
+        x = F.relu(self.bn1(self.conv1(x)))
         for block in range(self.config['num-resblocks']):
-            s = getattr(self, "res_%i" % block)(s)
+            x = getattr(self, "res_%i" % block)(x)
+        return x.view(-1, self.flatten_dim)
             
-        s = s.view(-1, self.flatten_dim)
-        s = self.outblock(s)
-        return s
+    def dist(self, x: torch.Tensor) -> torch.Tensor:
+        """Get distribution for atoms."""
+        feature = self.feature(x)
+        adv_hid = F.relu(self.advance_hidden(feature))
+        val_hid = F.relu(self.value_hidden(feature))
+        
+        advance = self.advance(adv_hid).view(
+            -1, self.n_actions, self.atom_size
+        )
+        value = self.value(val_hid).view(-1, 1, self.atom_size)
+        q_atoms = value + advance - advance.mean(dim=1, keepdim=True)
+        
+        dist = F.softmax(q_atoms, dim=-1)
+        dist = dist.clamp(min=1e-3)  # for avoiding nans
+        
+        return dist
+    
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward method implementation."""
+        dist = self.dist(x)
+        q = torch.sum(dist * self.support, dim=2)
+        return q
+    
+    def reset_noise(self):
+        """Reset all noisy layers."""
+        self.advance.reset_noise()
+        self.value.reset_noise()
     
     def get_elo(self):
         return self.elo_history[-1]
@@ -164,11 +164,23 @@ class DQN(nn.Module):
         else:
             self.optimizer = optim.AdamW(self.parameters(), lr=lr, amsgrad=True)
     
-    def predict(self, x):	# Chuyển đầu ra x về dạng torch tensor
+    
+    def predict(self, x):
         self.eval()
-        x = x.reshape(-1, self.input_shape[0], self.input_shape[1], self.input_shape[2])
+        if type(x) == np.ndarray:
+            x = torch.tensor(x, dtype=torch.float32, device=self.get_device())
+        x = x.reshape(-1, self.observation_shape[0], self.observation_shape[1], self.observation_shape[2])
         output = self.forward(x).detach()
-        return output.cpu().data.numpy()
+        return output.detach().cpu().numpy()
+    
+    def predict_probs(self, x):
+        output = self.predict(x)
+        # minmax scaling
+        output = (output - np.min(output)) / (np.max(output) - np.min(output))
+        output = output ** 4
+        # softmax
+        output = np.exp(output) / np.sum(np.exp(output))
+        return output
     
     def set_optimizer(self, optimizer, lr):
         if optimizer == "sgd":
@@ -184,16 +196,21 @@ class DQN(nn.Module):
         else:
             self.optimizer = optim.AdamW(self.parameters(), lr=lr, amsgrad=True)
     
-    def save(self, path=None):
+    def save(self, path=None, metadata=True):
         if path is None:
             logging.error('Model path not specified')
         state_dict = self.state_dict()
-        checkpoint = {
-            'elo_history': self.elo_history,
-            'loss_history': self.loss_history,
-            'state_dict': state_dict,
-            'optimizer': self.optimizer.state_dict(),
-        }
+        if metadata:
+            checkpoint = {
+                'elo_history': self.elo_history,
+                'loss_history': self.loss_history,
+                'state_dict': state_dict,
+                'optimizer': self.optimizer.state_dict(),
+            }
+        else:
+            checkpoint = {
+                'state_dict': state_dict,
+            }
         torch.save(checkpoint, path)
         logging.info('Model saved to {}'.format(path))
         
@@ -203,14 +220,15 @@ class DQN(nn.Module):
         if path is None:
             raise ValueError("Path is not defined")
         checkpoint = torch.load(path, map_location=device)
-        self.elo_history = checkpoint['elo_history']
-        self.loss_history = checkpoint['loss_history']
+        
         self.load_state_dict(checkpoint['state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer'])
+        
+        if 'elo_history' in checkpoint:
+            self.elo_history = checkpoint['elo_history']
+            
+        if 'loss_history' in checkpoint:
+            self.loss_history = checkpoint['loss_history']
+        if 'optimizer' in checkpoint:
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            
         print('Model loaded from {}'.format(path))
-
-    
-    def reset_noise(self):
-        """Reset all noisy layers."""
-        self.outblock.advance.reset_noise()
-        self.outblock.value.reset_noise()

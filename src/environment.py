@@ -26,11 +26,15 @@ class AgentFighting(object):
         self.players = [Player(i, self.num_players) for i in range(self.num_players)]
         self.current_player = 0
         self.state = None
+        self.last_diff_score = 0
+        self.s_counter = {}
         self.reset()
         
-    def render(self):
+    def render(self, state = None):
+        if state is None:
+            state = self.state
         if self.show_screen:
-            self.screen.load_state(self.state)
+            self.screen.load_state(state)
             self.screen.render()
     
     def save_image(self, path):
@@ -68,6 +72,21 @@ class AgentFighting(object):
             return dcopy(self.state)
         else:
             return self.state.get_state()
+        
+        
+    def hash_arr(self, arr: np.ndarray):
+        s = ''.join([str(x) for x in arr.flatten()])
+        return s
+    
+    def obs_string_representation(self, obs):
+        """
+        Returns a hash code for string representation of the state
+        """
+        s = self.hash_arr(obs)
+        return hash(s)
+    
+    def is_visited_multiple_times(self, obs):
+        return self.s_counter.get(self.obs_string_representation(obs), 0) > 1
     
     def is_terminal(self):
         """
@@ -161,6 +180,24 @@ class AgentFighting(object):
     
         return state, action, next_state
     
+    def get_symmetric(self, obs, pi):
+        obs = np.array(obs)
+        pi = np.array(pi)
+        sym_obs = []
+        sym_pi = []
+        for k in range(4):
+            _obs = dcopy(obs)
+            for i in range(obs.shape[0]):
+                obs_layer = self.rotate(obs[i], k=k)
+                _obs[i] = obs_layer
+            pi_layer = dcopy(pi)
+            for i in range(k):
+                pi_layer = pi_layer[[2, 3, 1, 0, 6, 4, 7, 5, 10, 11, 9, 8, 12]]
+            sym_obs.append(_obs)
+            sym_pi.append(pi_layer)
+            
+        return sym_obs, sym_pi
+        
     def get_valid_actions(self, state=None):
         valids = np.zeros(self.n_actions, dtype=bool)
         
@@ -168,6 +205,17 @@ class AgentFighting(object):
             valids[action] = self.is_valid_action(action)
             
         return valids
+    
+    def get_last_diff_score(self):
+        return self.last_diff_score
+    
+    def get_curr_agent_idx(self):
+        return self.state.agent_current_idx
+                    
+    def get_diff_score(self):
+        scores = self.state.scores
+        curr_player_id = self.state.current_player
+        return scores[curr_player_id] - scores[1 - curr_player_id]
                     
     def step(self, action, verbose=False):
         """
@@ -183,18 +231,37 @@ class AgentFighting(object):
         """
         current_player = self.state.current_player
         previous_scores = self.state.scores
-        is_valid_action = self.state.next(action)
-            
-        if self.show_screen:
-            self.screen.load_state(self.state)
-            self.screen.render()
+        diff_previous_scores = previous_scores[current_player] - previous_scores[1 - current_player]
+        current_agent_idx = self.state.agent_current_idx
         
-        if is_valid_action:
-            new_scores = self.state.scores
-            diff_previous_scores = previous_scores[current_player] - previous_scores[1 - current_player]
-            diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
-            reward = diff_new_score - diff_previous_scores
+        self.state.next(action)
+        
+        if self.show_screen:
+            if self.state.agent_current_idx == 0:
+                self.render(self.state)
+            
+        new_scores = self.state.scores
+        diff_new_score = new_scores[current_player] - new_scores[1 - current_player]
+        reward = 0.25 if diff_new_score > 0 else -0.5
+        
+        if diff_new_score > diff_previous_scores:
+            reward += diff_new_score - diff_previous_scores
+        elif diff_new_score < diff_previous_scores:
+            reward -= diff_previous_scores - diff_new_score
         else:
-            reward = 0
-                
-        return self.get_state(), reward, self.is_terminal()
+            reward -= 0.1
+            
+        next_x, next_y = self.state.agent_coords_in_order[current_player][current_agent_idx]
+        
+        if self.state.territories[current_player][next_x][next_y] == 1:
+            reward -= 0.25
+        else:
+            reward += 0.15
+        
+        if next_x == 0 or next_x == self.state.height - 1 or next_y == 0 or next_y == self.state.width - 1:
+            reward -= 0.2
+            
+        self.last_diff_score = diff_new_score
+        
+        next_state = self.state.get_state()
+        return next_state, reward, self.is_terminal()

@@ -6,7 +6,7 @@ from __future__ import division
 import json
 import logging
 import time
-from Algorithms.RandomStep import RandomStep
+from algorithms.RandomStep import RandomStep
 from src.environment import AgentFighting
 log = logging.getLogger(__name__)
 from random import seed
@@ -23,7 +23,7 @@ def main():
     configs = json.load(open('configs/map.json'))
     env = AgentFighting(args, configs, args.show_screen)
     algorithm = RandomStep(n_actions=env.n_actions, num_agents=env.num_agents)
-    state = env.reset()
+    state = env.get_state()
     while not env.is_terminal():
         action = algorithm.get_action(state)
         _ = env.step(action, verbose=True)

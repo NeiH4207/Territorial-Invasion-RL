@@ -46,12 +46,12 @@ class Memory(object):
         return state_batch, action_batch, reward_batch, next_state_batch, done_batch
 
 class DQN():
-    def __init__(self, n_observations=None, n_actions=None, model=None,
+    def __init__(self, observation_shape=None, n_actions=None, model=None,
                     tau=0.005, gamma=0.99, epsilon=0.9, epsilon_min=0.05, 
                     epsilon_decay=0.99,
                     memory_size=4096,  model_path=None):
         super().__init__()
-        self.n_observations = n_observations
+        self.observation_shape = observation_shape
         self.n_actions = n_actions
         self.memory_size = memory_size
         self.memory = Memory(memory_size)
@@ -68,6 +68,7 @@ class DQN():
             'loss': [],
             'reward': []
         }
+        self.counter = 0
         
     def fully_mem(self, perc=1.0):
         return len(self.memory) / (self.memory_size - 1) >= perc
@@ -78,12 +79,18 @@ class DQN():
     def memorize(self, state, action, reward, next_state, done):
         self.memory.store(state, action, reward, next_state, done)
         
-    def get_action(self, state, valid_actions=None):
+    def get_action(self, state, valid_actions=None, model=None):
+        if model is None:
+            model = self.policy_net
         state = torch.FloatTensor(np.array(state)).to(self.device)
-        act_values = self.policy_net.predict(state)[0]
-        # set value of invalid actions to -inf
-        if valid_actions is not None:
-            act_values[~valid_actions] = -float('inf')
+        act_values = model.predict(state)[0]
+        
+        if np.random.rand() <= self.epsilon:
+            if valid_actions is not None:
+                act_values[~valid_actions] = -float('inf')
+                return np.random.choice(np.arange(self.n_actions)[valid_actions])
+            else:
+                return np.random.choice(np.arange(self.n_actions))
         return int(np.argmax(act_values))  # returns action
         
     def replay(self, batch_size, verbose=False):
@@ -124,25 +131,34 @@ class DQN():
             torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
             self.policy_net.optimizer.step()
         
-            target_net_state_dict = self.target_net.state_dict()
-            policy_net_state_dict = self.policy_net.state_dict()
-            for key in policy_net_state_dict:
-                target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
-            self.target_net.load_state_dict(target_net_state_dict)
+            self.soft_update()
             total_loss += loss.item()
             mean_loss = total_loss / (i + 1)
             
         self.policy_net.add_loss(mean_loss)
-        self.policy_net.reset_noise()
-        self.target_net.reset_noise()
+        self.adaptiveEGreedy()
+        if self.counter % int(1 / self.tau) == 0:
+            self.hard_update()
+            
         return self.policy_net.get_loss()
+    
+    def soft_update(self):
+        target_net_state_dict = self.target_net.state_dict()
+        policy_net_state_dict = self.policy_net.state_dict()
+        for key in policy_net_state_dict:
+            target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
+        self.target_net.load_state_dict(target_net_state_dict)
+        self.counter += 1
+        
+    def hard_update(self):
+        self.target_net.load_state_dict(self.policy_net.state_dict())
         
     def adaptiveEGreedy(self):
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
         
-    def load_model(self, path):
-        self.policy_net.load(path)
+    def load_model(self, path, device=None):
+        self.policy_net.load(path, device=device)
         self.target_net = deepcopy(self.policy_net)
         
     def save_model(self):
