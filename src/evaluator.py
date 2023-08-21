@@ -39,7 +39,7 @@ class Evaluator():
         rn1 = rn1 if rn1 > 0 else 0
         return (rn0, rn1)
         
-    def eval(self, old_model, new_model, change_elo=True):
+    def eval(self, old_model, new_model, using_prob=False):
         
         elo_1 = old_model.get_elo()
         elo_2 = new_model.get_elo()
@@ -57,15 +57,29 @@ class Evaluator():
                     torch_state = torch.FloatTensor(state['observation']).to(self.device)
                     act_values = new_model.predict(torch_state)[0]
                     if valid_actions is not None:
+                        act_values -= np.min(act_values)
                         act_values[~valid_actions] = -float('inf')
-                    action = int(np.argmax(act_values))
+                    if not using_prob:
+                        action = int(np.argmax(act_values))
+                    else:
+                        # sclaing the action values to avoid overflow
+                        probs = np.exp(act_values) / (np.sum(np.exp(act_values)) + 1e-10)
+                        probs = probs ** 4 / np.sum(probs ** 4)
+                        action = int(torch.multinomial(torch.tensor(probs), 1))
                 else:
                     valid_actions = state['valid_actions']
                     torch_state = torch.FloatTensor(state['observation']).to(self.device)
                     act_values = old_model.predict(torch_state)[0]
                     if valid_actions is not None:
+                        act_values -= np.min(act_values)
                         act_values[~valid_actions] = -float('inf')
-                    action = int(np.argmax(act_values))
+                    if not using_prob:
+                        action = int(np.argmax(act_values))
+                    else:
+                        # sclaing the action values to avoid overflow
+                        probs = np.exp(act_values) / np.sum(np.exp(act_values))
+                        probs = probs ** 4 / np.sum(probs ** 4)
+                        action = int(torch.multinomial(torch.tensor(probs), 1))
                 scores = self.env.state.scores
                 next_state, _, done = self.env.step(action)
                 state = next_state

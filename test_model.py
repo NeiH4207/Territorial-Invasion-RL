@@ -19,10 +19,11 @@ plt.ion()
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=True)
+    parser.add_argument('-s', '--show-screen', action='store_true')
+    parser.add_argument('-n', '--n-evals', type=int, default=5)
     parser.add_argument('--model-path-1', type=str, default='trained_models/model.pt')
     parser.add_argument('--model-path-2', type=str, default='trained_models/model.pt')
-    parser.add_argument('--load-model', action='store_true', default=True)
+    parser.add_argument('--load-model', action='store_true')
     parser.add_argument('--device', type=str, default='cuda')
     return parser.parse_args()
 
@@ -56,7 +57,7 @@ def main():
     
     evaluator = Evaluator(env, n_evals=args.n_evals, device=device)
     
-    evaluator.eval(model_1, model_2, change_elo=False)
+    evaluator.eval(model_1, model_2, using_prob=False)
 
 if __name__ == "__main__":
     main()
