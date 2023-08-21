@@ -22,7 +22,7 @@ from models.RainbowNet import RainbowNet
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool)
+    parser.add_argument('-s', '--show-screen', action='store_true')
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('--figure-path', type=str, default='figures/')
     parser.add_argument('--n-evals', type=int, default=50)

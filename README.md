@@ -19,6 +19,24 @@ options:
   --render      RENDER
 ```
 
+Example command for testing game with 10 episodes:
+
+```python
+python3 test_game.py --show-screen
+```
+
+## Test game using pretrained model
+
+```python
+python3 test_model.py \
+    --show-screen \
+    --n-evals 10 \
+    --model-path-1 ./trained_models/model.pt \
+    --model-path-2 trained_models/model.pt \
+    --load-model \
+    --device cuda
+```
+
 ## How to train model
 
 Full options:
@@ -59,14 +77,4 @@ python3 dqn_main.py \
         --lr 1e-6 \
         --optimizer adamw \
         --n-step 3
-```
-
-## Test game using pretrained model
-
-```python
-python3 --show-screen \
-    --model-path-1 ./trained_models/model.pt \
-    --model-path-2 trained_models/model.pt \
-    --load-model \
-    --device cuda
 ```

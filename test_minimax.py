@@ -18,7 +18,7 @@ from argparse import ArgumentParser
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('--show-screen', type=bool, default=True)
+    parser.add_argument('-s', '--show-screen', action='store_true')
     parser.add_argument('--render', type=bool, default=True)
     parser.add_argument('--model-path', type=str, default='trained_models/nnet3.pt')
     parser.add_argument('--device', type=str, default='cuda')
