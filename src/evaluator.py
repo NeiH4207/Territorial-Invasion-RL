@@ -53,6 +53,8 @@ class Evaluator():
             state = self.env.get_state()
             for cnt in count():
                 if state['player-id'] == 0:
+                    limit_obs_size = (new_model.observation_shape[1]+ 1 ) // 2
+                    state = self.env.get_state(limit_obs_size=limit_obs_size)
                     valid_actions = state['valid_actions']
                     torch_state = torch.FloatTensor(state['observation']).to(self.device)
                     act_values = new_model.predict(torch_state)[0]
@@ -67,6 +69,8 @@ class Evaluator():
                         probs = probs ** 4 / np.sum(probs ** 4)
                         action = int(torch.multinomial(torch.tensor(probs), 1))
                 else:
+                    limit_obs_size = (old_model.observation_shape[1]+ 1 ) // 2
+                    state = self.env.get_state(limit_obs_size=limit_obs_size)
                     valid_actions = state['valid_actions']
                     torch_state = torch.FloatTensor(state['observation']).to(self.device)
                     act_values = old_model.predict(torch_state)[0]
@@ -80,9 +84,10 @@ class Evaluator():
                         probs = np.exp(act_values + 1e-10) / (np.sum(np.exp(act_values)) + 1e-10)
                         probs = probs ** 4 / np.sum(probs ** 4)
                         action = int(torch.multinomial(torch.tensor(probs), 1))
+                        
                 scores = self.env.state.scores
-                next_state, _, done = self.env.step(action)
-                state = next_state
+                _, _, done = self.env.step(action)
+                
                 if done:
                     break
             scores = self.env.state.scores
@@ -111,7 +116,7 @@ class Evaluator():
         logging.info('Elo changes from {} to {} | Win {}/{}'.\
             format(old_elo, elo_2, num_wins, self.n_evals))
             
-        return num_wins / self.n_evals >= 0.55 
+        return num_wins / self.n_evals >= 0.65
     
     
     def eval_pg(self, old_model, new_model, change_elo=True):

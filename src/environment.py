@@ -64,14 +64,14 @@ class AgentFighting(object):
     def is_valid_action(self, action):
         return action < self.n_actions
     
-    def get_space_size(self):
-        return self.get_state()['observation'].shape
+    def get_space_size(self, limit_obs_size=None):
+        return self.get_state(limit_obs_size)['observation'].shape
             
-    def get_state(self, obj=False):
+    def get_state(self, limit_obs_size=None, obj=False):
         if obj:
             return dcopy(self.state)
         else:
-            return self.state.get_state()
+            return self.state.get_state(limit_obs_size)
         
         
     def hash_arr(self, arr: np.ndarray):

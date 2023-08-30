@@ -87,7 +87,7 @@ class Rainbow(DQN):
         if model is None:
             model = self.policy_net
             epsilon = 0
-        if np.random.rand() <= self.epsilon:
+        if np.random.rand() <= epsilon:
             if valid_actions is None or sum(valid_actions) == 0:
                 return np.random.choice(self.n_actions)
             return np.random.choice(np.arange(self.n_actions)[valid_actions])

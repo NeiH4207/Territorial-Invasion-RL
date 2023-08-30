@@ -10,16 +10,14 @@ import logging
 import os
 import time
 import torch
-from Algorithms.Rainbow import Rainbow
+from algorithms.Rainbow import Rainbow
 from src.mcts import MCTS
 from src.evaluator import Evaluator
 from src.environment import AgentFighting
 from src.utils import *
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 from argparse import ArgumentParser
-from models.AgentDQN import DQN
-from Algorithms.DDQN import DDQN
-from Algorithms.PER import PER
+from models.RainbowNet import RainbowNet
 
 def argument_parser():
     parser = ArgumentParser()
@@ -41,7 +39,7 @@ def argument_parser():
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--memory-size', type=int, default=32768 * 4)
     parser.add_argument('--num-episodes', type=int, default=100000)
-    parser.add_argument('--model-path', type=str, default='trained_models/procon.pt')
+    parser.add_argument('--model-path', type=str, default='trained_models/model.pt')
     
     return parser.parse_args()
 
@@ -55,28 +53,36 @@ def main():
     logging.info('Action space: {}'.format(n_actions))
     algorithm = None
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = DQN(observation_shape, n_actions, 
-                optimizer=args.optimizer, 
-                lr=args.lr,
-                dueling=True).to(device)
+    
+    model = RainbowNet(
+        observation_shape, 
+        n_actions, 
+        optimizer=args.optimizer, 
+        lr=args.lr,
+        atom_size=configs['atom_size'], 
+        v_min=configs['v_min'],
+        v_max=configs['v_max'],
+    ).to(device)
     
     model.load(args.model_path, device)
     
     algorithm = MCTS(env, model,
-            numMCTSSims=50,
-            cpuct=1,
+            numMCTSSims=10,
+            cpuct=5,
             exploration_rate=0,
             selfplay=True)
     
     state = env.get_state(obj=True)
     env.render(state)
+    start = time.time()
     while state.is_terminal() == False:
-        start = time.time()
         action = algorithm.get_action(state)
-        ed = time.time()
-        logging.info('Action: {} | Time: {}'.format(action, ed - start))
         state.next(action)
-        env.render(state)
+        if state.agent_current_idx == 0:
+            env.render(state)
+            ed = time.time()
+            logging.info('Action: {} | Time: {}'.format(action, ed - start))
+            start = time.time()
 
 if __name__ == "__main__":
     main()

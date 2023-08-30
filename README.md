@@ -71,10 +71,11 @@ python3 dqn_main.py \
         --model-path ./trained_models/model.pt \
         --num-episodes 1000000 \
         --memory-size 64384 \
-        --batch-size 64 \
+        --batch-size 256 \
         --gamma 0.99 \
         --tau 0.01 \
         --lr 1e-6 \
         --optimizer adamw \
-        --n-step 3
+        --n-step 3 \
+        --verbose
 ```

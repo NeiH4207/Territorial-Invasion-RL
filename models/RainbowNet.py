@@ -43,10 +43,11 @@ class RainbowNet(nn.Module):
                  v_max: int,
                  optimizer='adamw', 
                  device='cuda',
-                 lr=0.001):
+                 lr=0.001,
+                 version=1):
         super(RainbowNet, self).__init__()
         # game params
-        self.config = config
+        self.config = config[str(version)]
         self.observation_shape = observation_shape
         self.n_actions = n_actions
         self.atom_size = atom_size
@@ -55,27 +56,27 @@ class RainbowNet(nn.Module):
         self.elo_history = np.array([1000])
         self.loss_history = np.array([])
         
-        self.conv1 = nn.Conv2d(self.in_channels , config['conv1-num-filter'], kernel_size=config['conv1-kernel-size'], 
-                               stride=config['conv1-stride'], padding=config['conv1-padding'])
+        self.conv1 = nn.Conv2d(self.in_channels , self.config['conv1-num-filter'], kernel_size=self.config['conv1-kernel-size'], 
+                               stride=self.config['conv1-stride'], padding=self.config['conv1-padding'])
         
-        self.bn1 = nn.BatchNorm2d(config['conv1-num-filter'])
+        self.bn1 = nn.BatchNorm2d(self.config['conv1-num-filter'])
         
-        for block in range(config['num-resblocks']):
-            setattr(self, "res_%i" % block,ResBlock(config['conv1-num-filter'],
-                                                    config['conv1-num-filter'],
-                                                    config['resblock-kernel-size']))
+        for block in range(self.config['num-resblocks']):
+            setattr(self, "res_%i" % block,ResBlock(self.config['conv1-num-filter'],
+                                                    self.config['conv1-num-filter'],
+                                                    self.config['resblock-kernel-size']))
         
         
-        self.out_conv1_dim = int((self.observation_shape[1] - config['conv1-kernel-size'] \
-            + 2 * config['conv1-padding']) / config['conv1-stride'] + 1)
-        self.flatten_dim = config['conv1-num-filter'] * ((self.out_conv1_dim) ** 2)
+        self.out_conv1_dim = int((self.observation_shape[1] - self.config['conv1-kernel-size'] \
+            + 2 * self.config['conv1-padding']) / self.config['conv1-stride'] + 1)
+        self.flatten_dim = self.config['conv1-num-filter'] * ((self.out_conv1_dim) ** 2)
         
         # set advance layer
-        self.advance_hidden = NoisyLinear(self.flatten_dim, config['fc1-num-units'])
-        self.advance = NoisyLinear(config['fc1-num-units'], self.n_actions * self.atom_size)
+        self.advance_hidden = NoisyLinear(self.flatten_dim, self.config['fc1-num-units'])
+        self.advance = NoisyLinear(self.config['fc1-num-units'], self.n_actions * self.atom_size)
         
-        self.value_hidden = NoisyLinear(self.flatten_dim, config['fc1-num-units'])
-        self.value = NoisyLinear(config['fc1-num-units'], self.atom_size)
+        self.value_hidden = NoisyLinear(self.flatten_dim, self.config['fc1-num-units'])
+        self.value = NoisyLinear(self.config['fc1-num-units'], self.atom_size)
         
         self.set_optimizer(optimizer, lr)
         
@@ -181,6 +182,18 @@ class RainbowNet(nn.Module):
         # softmax
         output = np.exp(output) / np.sum(np.exp(output))
         return output
+    
+    def get_pi_values(self, x):
+        output_value = self.predict(x)[0]
+
+        # minmax scaling
+        output = (output_value - np.min(output_value)) / (np.max(output_value) - np.min(output_value))
+        output = output ** 4
+        # softmax
+        pi = np.exp(output) / np.sum(np.exp(output))
+        value = np.argmax(pi * output_value)
+        return pi, value
+        
     
     def set_optimizer(self, optimizer, lr):
         if optimizer == "sgd":

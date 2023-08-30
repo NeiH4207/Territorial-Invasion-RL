@@ -19,11 +19,11 @@ plt.ion()
 
 def argument_parser():
     parser = ArgumentParser()
-    parser.add_argument('-s', '--show-screen', action='store_true')
+    parser.add_argument('-s', '--show-screen', action='store_true', default=True)
     parser.add_argument('-n', '--n-evals', type=int, default=5)
     parser.add_argument('--model-path-1', type=str, default='trained_models/model.pt')
-    parser.add_argument('--model-path-2', type=str, default='trained_models/model.pt')
-    parser.add_argument('--load-model', action='store_true')
+    parser.add_argument('--model-path-2', type=str, default='trained_models/model.v2.pt')
+    parser.add_argument('--load-model', action='store_true', default=True)
     parser.add_argument('--device', type=str, default='cuda')
     return parser.parse_args()
 
@@ -40,15 +40,17 @@ def main():
         v_min=configs['v_min'],
         v_max=configs['v_max'],
         atom_size=configs['atom_size'],
-        device=device
+        device=device,
+        version=1
     ).to(device)
     model_2 = RainbowNet(
-        observation_shape, 
+        env.get_space_size(limit_obs_size=10), 
         n_actions, 
         v_min=configs['v_min'],
         v_max=configs['v_max'],
         atom_size=configs['atom_size'],
-        device=device
+        device=device,
+        version=2
     ).to(device)
     
     if args.load_model:
@@ -57,7 +59,7 @@ def main():
     
     evaluator = Evaluator(env, n_evals=args.n_evals, device=device)
     
-    evaluator.eval(model_1, model_2, using_prob=True)
+    evaluator.eval(model_1, model_2, using_prob=False)
 
 if __name__ == "__main__":
     main()

@@ -29,7 +29,7 @@ def argument_parser():
     
     # DDQN arguments
     parser.add_argument('--gamma', type=float, default=0.99)
-    parser.add_argument('--tau', type=int, default=0.01)
+    parser.add_argument('--tau', type=float, default=0.01)
     parser.add_argument('--n-step', type=int, default=3)
     
     # model training arguments
@@ -47,7 +47,7 @@ def main():
     args = argument_parser()
     configs = json.load(open('configs/map.json'))
     env = AgentFighting(args, configs, args.show_screen)
-    observation_shape = env.get_space_size()
+    observation_shape = env.get_space_size(limit_obs_size=7)
     n_actions = env.n_actions
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
@@ -95,13 +95,13 @@ def main():
     algorithm.set_multi_agent_env(env.num_agents)
     
     best_model_path = args.model_path.replace('.pt', '_best.pt')
-    # model.save(best_model_path)
+    model.save(best_model_path)
     best_model = deepcopy(model)
     best_model.load(best_model_path, device)
     target_player_id = 1
     
     for episode in range(args.num_episodes):
-        _tqdm = tqdm(range(30), 'Self-Play')
+        _tqdm = tqdm(range(10), 'Self-Play')
         for i_game in _tqdm:
             done = False
             state = env.get_state()
@@ -131,10 +131,10 @@ def main():
                 next_agent_idx = env.get_curr_agent_idx()
                 if target_player_id == state['player-id'] and next_agent_idx == 0:
                     curr_diff_score = env.get_diff_score()
-                    env.save_image('figures/live_update.png')
+                    # env.save_image('figures/live_update.png')
                     for obs, action, reward, prev_diff_score in zip(observations, actions, local_rewards, prev_diff_scores):
-                        global_reward = curr_diff_score - prev_diff_score
-                        obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
+                        global_reward = (curr_diff_score - prev_diff_score) / env.num_agents
+                        # obs, action, next_obs = env.get_symmetry_transition(obs, action, next_obs)
                         reward = reward * 0.975 + global_reward * 0.025
                         transition = [obs, action, reward, next_obs, False]
                         one_step_transition = algorithm.memory_n.store(*transition)
