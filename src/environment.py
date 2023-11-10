@@ -2,17 +2,17 @@ from collections import deque
 from copy import deepcopy as dcopy
 import random
 import numpy as np
-from Board.screen import Screen
+from board.screen import Screen
 from src.player import Player
 from src.state import State
 import logging
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 class AgentFighting(object):
-    def __init__(self, args, configs, show_screen = False):
+    def __init__(self, args, configs, render = False):
         self.args = args
         self.configs = configs
-        self.show_screen = show_screen
+        self._render = render
         
         self.action_space = {
             'Move': ['U', 'D', 'L', 'R', 'UL', 'UR', 'DL', 'DR'],
@@ -22,7 +22,7 @@ class AgentFighting(object):
         
         self.n_actions = len(self.action_space['Move']) + len(self.action_space['Change']) + 1
         self.num_players = 2
-        self.screen = Screen(render=self.show_screen)
+        self.screen = Screen(render=self._render)
         self.players = [Player(i, self.num_players) for i in range(self.num_players)]
         self.current_player = 0
         self.state = None
@@ -33,12 +33,12 @@ class AgentFighting(object):
     def render(self, state = None):
         if state is None:
             state = self.state
-        if self.show_screen:
+        if self._render:
             self.screen.load_state(state)
             self.screen.render()
     
     def save_image(self, path):
-        if self.show_screen:
+        if self._render:
             self.screen.save(path)
     
     def reset(self):
@@ -52,11 +52,9 @@ class AgentFighting(object):
         self.state.set_players(self.players)
         self.num_agents = self.state.num_agents
         self.state.make_random_map()
-        if self.show_screen:
+        if self._render:
             self.screen.init(self.state)
         self.num_agents = self.state.num_agents
-        state = self.state.get_state()
-        return state
     
     def in_bounds(self, coords):
         return 0 <= coords[0] < self.state.height and 0 <= coords[1] < self.state.width
@@ -67,11 +65,11 @@ class AgentFighting(object):
     def get_space_size(self):
         return self.get_state()['observation'].shape
             
-    def get_state(self, obj=False):
-        if obj:
+    def get_state(self, partial=True, return_object=False):
+        if return_object:
             return dcopy(self.state)
         else:
-            return self.state.get_state()
+            return self.state.get_state(partial=partial)
         
         
     def hash_arr(self, arr: np.ndarray):
@@ -236,7 +234,7 @@ class AgentFighting(object):
         
         self.state.next(action)
         
-        if self.show_screen:
+        if self._render:
             if self.state.agent_current_idx == 0:
                 self.render(self.state)
             

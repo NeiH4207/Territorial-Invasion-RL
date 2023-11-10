@@ -1,15 +1,21 @@
-from setuptools import setup, find_packages
+'''
+Usage: install after modifying the configurations: pip3 install -e .
+'''
 
+import pathlib
+
+from setuptools import find_packages, setup
+
+here = pathlib.Path(__file__).parent.resolve()
+long_description = (here / "README.md").read_text(encoding="utf-8")
+
+def get_requirements(path: str):
+    return [l.strip() for l in open(path)]
 setup(
        name='FightingGameAI',
        version='0.1',
        packages=find_packages(),
-       install_requires=[
-           'pip<=23.0.1',
-           'setuptools<=66',
-           'wheel<=0.38.4',
-           'numpy<=1.25.2',
-       ],
+        install_requires=get_requirements("requirements.txt"),
        entry_points={
            'console_scripts': [
            ],

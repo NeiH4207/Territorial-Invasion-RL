@@ -1,11 +1,10 @@
 # MODULES
-import cv2
 import numpy as np
 import pygame
 import os 
 
 RED = (255, 0, 0)
-BG_COLOR = (231, 225, 232)
+BG_COLOR = (245, 245, 245)
 LINE_COLOR = (0, 0, 0)
 CIRCLE_COLOR = (239, 231, 200)
 CROSS_COLOR = (66, 66, 66)
@@ -22,7 +21,7 @@ class Screen():
             self.color_B = (129, 188, 255)
             self.dir_path = os.path.dirname(os.path.realpath(__file__))
             self.load_image()
-            pygame.display.set_caption( 'ProCon-2020' ) 
+            pygame.display.set_caption( 'ProCon-2023' ) 
             self.board = None
 
     def init(self, state): 
@@ -41,22 +40,6 @@ class Screen():
         
     def save(self, path):
         pygame.image.save(self.screen, path)
-        
-    def get_numpy_img(self, state):
-        x, y = self.state.get_curr_agent()
-        self.screen.fill( BG_COLOR )
-        self.load_state(state)
-        self.screen.blit(self.cur_agent_img, self.coord(x, y))
-        numpy_img = pygame.surfarray.array3d(pygame.display.get_surface()) 
-        crop_size = min(numpy_img.shape[0], numpy_img.shape[1])
-        numpy_img = numpy_img[:crop_size,:crop_size,:]
-        numpy_img = cv2.transpose(numpy_img)
-        numpy_img = cv2.cvtColor(numpy_img, cv2.COLOR_RGB2BGR)
-        numpy_img = cv2.resize(numpy_img, (172, 172))
-        cv2.imwrite('figures/test.png', numpy_img)
-        self.draw_lines()
-        self.load_state(state)
-        return numpy_img
 
     def load_image(self):
         self.agent_A_img = pygame.transform.scale(
@@ -168,7 +151,7 @@ class Screen():
         self.screen.blit(STurns, self.coord(0, self.width + 2))
     
     def show_value(self, value, x, y):
-        myFont = pygame.font.SysFont("Helvetica", 30)
+        myFont = pygame.font.SysFont("Times New Roman", 30)
         value = round(value)
         pos = 5
         if value >= 0 and value < 10:
@@ -177,13 +160,6 @@ class Screen():
             pos = 10
         value = myFont.render(str(value), 1, (0, 0, 0))
         self.screen.blit(value, (x * self.SQUARE_SIZE + pos, y * self.SQUARE_SIZE + 8))
-        
-    def show_treasure_value(self, value, x, y):
-        self.draw_treasure(x, y)
-        value = round(value)
-        myFont = pygame.font.SysFont("Times New Roman", 13)
-        value = myFont.render(str(value), 1, (255, 0, 0))
-        self.screen.blit(value, (x * self.SQUARE_SIZE + 2, y * self.SQUARE_SIZE + int(self.SQUARE_SIZE * 5 / 7)))
         
     def draw_wall(self, player_id, x, y):
         if player_id == 0:
@@ -223,8 +199,8 @@ class Screen():
         
     def draw_squares(self, coord, player_ID):
         x, y = coord
-        self._draw_squares(2 + x * self.SQUARE_SIZE, 2 + y * self.SQUARE_SIZE,
-                           (self.SQUARE_SIZE - 3), (self.SQUARE_SIZE - 3), player_ID)
+        self._draw_squares(1 + x * self.SQUARE_SIZE, 1 + y * self.SQUARE_SIZE,
+                           (self.SQUARE_SIZE - 1), (self.SQUARE_SIZE - 1), player_ID)
         
     def _redraw_squares(self, x1, y1, x2, y2, player_ID):
         color = self.color_A if player_ID == 0 else self.color_B
@@ -232,8 +208,8 @@ class Screen():
         
         
     def redraw_squares(self, x, y, player_ID):
-        self._redraw_squares(2 + x * self.SQUARE_SIZE, 2 + y * self.SQUARE_SIZE,
-                           (self.SQUARE_SIZE - 3), (self.SQUARE_SIZE - 3), player_ID)
+        self._redraw_squares(1 + x * self.SQUARE_SIZE, 1 + y * self.SQUARE_SIZE,
+                           (self.SQUARE_SIZE - 1), (self.SQUARE_SIZE - 1), player_ID)
         self.show_value(self.state.title_board[x][y], x, y)
            
     def _make_empty_squares(self, x1, y1, x2, y2):
@@ -242,6 +218,6 @@ class Screen():
         
     def make_empty_square(self, coord):
         x, y = coord
-        self._make_empty_squares(2 + x * self.SQUARE_SIZE, 2 + y * self.SQUARE_SIZE,
-                           (self.SQUARE_SIZE - 2), (self.SQUARE_SIZE - 2))
+        self._make_empty_squares(1 + x * self.SQUARE_SIZE, 1 + y * self.SQUARE_SIZE,
+                           (self.SQUARE_SIZE - 1), (self.SQUARE_SIZE - 1))
         

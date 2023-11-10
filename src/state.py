@@ -18,7 +18,7 @@ class State(Map):
         self.alpha = 1 # effect of wall
         self.beta = 20 # effect of castle
         self.gamma = 5 # effect of territory
-        self.limit_obs_size = 10
+        self.obs_range = configs['obs_range']
         
         self.action_map = {
             ('Move', 'U'): 0,
@@ -117,7 +117,26 @@ class State(Map):
     def terminal(self):
         return self.remaining_turns == 0
     
-    def get_state(self):
+    def get_state(self, partial=True):
+        """
+        partial = True (default) if you want to get the partial state,
+        the environment will return the a matrix of size (self.obs_range x 2 + 1) x (self.obs_range x 2 + 1) 
+        cropped from the full state with the center cell being the current agent.
+        The partial state is 
+        [
+            [first_agent_board_matrix],
+            [first_wall_board_matrix],
+            [first_territory_board_matrix],
+            [second_agent_board_matrix],
+            [second_wall_board_matrix],
+            [second_territory_board_matrix],
+            [castle_board_matrix],
+            [pond_board_matrix],
+        ]
+        see function get_state() in src/state.py
+        Using env.get_state(partial=False) if you want to get the full state,
+        the full state is a matrix of size height x width (observation_shape)
+        """
         # Standardized variable names to improve readability
         players = [self.current_player, self.current_player ^ 1]
         agent_board = self.agents[players]
@@ -126,7 +145,6 @@ class State(Map):
         wall_board = self.walls[players]
         territory_board = self.territories[players]
         agent_current_board = np.zeros(agent_board[0].shape)
-        # Removed debugging statement
         obs = np.stack(
             (
                 agent_board[0], 
@@ -141,19 +159,23 @@ class State(Map):
             axis=0
         )
         
+        
+        
         # Standardized variable names to improve readability and changed key name
         current_agent_idx = self.agent_current_idx
         current_agent_coord = self.agent_coords_in_order[self.current_player][current_agent_idx]
-        transision_vector = (self.limit_obs_size - 1 - current_agent_coord[0], 
-                             self.limit_obs_size - 1 - current_agent_coord[1])
-        for i, matrix in enumerate(obs):
-            obs[i] = self.transition_matrix(matrix, transision_vector)
-            
-        # crop obs to limit_obs_size
-        obs = obs[:, :self.limit_obs_size*2-1, :self.limit_obs_size*2-1]
-        masked_obs = [(obs[0] != -1) * 1]
-        obs = np.concatenate([obs, masked_obs], axis=0)
-        agent_current_board[current_agent_coord[0], current_agent_coord[1]] = 1
+        
+        if partial:
+            # crop obs to obs_range
+            transision_vector = (self.obs_range - 1 - current_agent_coord[0], 
+                                self.obs_range - 1 - current_agent_coord[1])
+            for i, matrix in enumerate(obs):
+                obs[i] = self.transition_matrix(matrix, transision_vector)
+                
+            obs = obs[:, :self.obs_range*2-1, :self.obs_range*2-1]
+            masked_obs = [(obs[0] != -1) * 1]
+            obs = np.concatenate([obs, masked_obs], axis=0)
+            agent_current_board[current_agent_coord[0], current_agent_coord[1]] = 1
         
         valid_actions = np.zeros(len(self.action_map.values()), dtype=bool)
         for action in list(self.action_map.values()):
@@ -167,8 +189,10 @@ class State(Map):
         return {
             'player-id': self.current_player,
             'observation': obs, 
+            'current-agent-id': current_agent_idx,
             'curr_agent_xy': dcopy(current_agent_coord),
             'valid_actions': valid_actions,
+            'remaning_turns': self.remaining_turns,
             'hash_str': self.string_representation(),
             }
 

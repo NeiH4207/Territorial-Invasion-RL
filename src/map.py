@@ -30,16 +30,13 @@ class Map(object):
                     self.agent_coords_in_order[1].append((i, j))
     
     def make_random_map(self):
-        self.agents = np.zeros((2, self.height_max, self.width_max), dtype=np.int8)
-        self.walls = np.zeros((2, self.height_max, self.width_max), dtype=np.int8)
-        self.castles = np.zeros((self.height_max, self.width_max), dtype=np.int8)
-        self.territories = np.zeros((2, self.height_max, self.width_max), dtype=np.int8)
-        self.ponds = np.zeros((self.height_max, self.width_max), dtype=np.int8)
-        
         self.height = random.randint(self.height_min, self.height_max)
-        self.width = self.height # random.randint(self.width_min, self.width_max)
-        self.height_max = self.height_max
-        self.width_max = self.width_max
+        self.width = random.randint(self.width_min, self.width_max)
+        self.agents = np.zeros((2, self.height, self.width), dtype=np.int8)
+        self.walls = np.zeros((2, self.height, self.width), dtype=np.int8)
+        self.castles = np.zeros((self.height, self.width), dtype=np.int8)
+        self.territories = np.zeros((2, self.height, self.width), dtype=np.int8)
+        self.ponds = np.zeros((self.height, self.width), dtype=np.int8)
         self.n_turns = random.randint(self.min_num_turns, self.max_num_turns)
         self.remaining_turns = self.n_turns
         self.agent_coords_in_order = [[], []]
@@ -113,7 +110,7 @@ class Map(object):
         print('\n' + '-' * self.width * 4)
     
     def in_bounds(self, x, y):
-        return x >= 0 and x < self.width and y >= 0 and y < self.height
+        return x >= 0 and x < self.height and y >= 0 and y < self.width
     
     def is_empty(self, x, y):
         return self.map[0][x][y] == 0 and self.map[1][x][y] == 0
