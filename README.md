@@ -1,4 +1,4 @@
-#  ✨ Castle AI ✨  
+#  ✨ Territorial Invasion Reinforcement Learning ✨  
 
 Documents link: https://www.fit.uet.vnu.edu.vn/wp-content/uploads/2023/04/De-PROCON_2023.pdf
 
